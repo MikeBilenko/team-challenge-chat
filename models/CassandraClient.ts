@@ -2,7 +2,7 @@ import cassandra from "cassandra-driver";
 const Client = cassandra.Client;
 const Mapper = cassandra.mapping.Mapper;
 
-const CassandraClient = new Client({ contactPoints: ["cassandra-container"], localDataCenter: "datacenter1", credentials: { username: 'cassandra', password: 'cassandra' } });
+const CassandraClient = new Client({ contactPoints: ["cassandra-container"], localDataCenter: "datacenter1", keyspace: "chat", credentials: { username: 'cassandra', password: 'cassandra' } });
 
 async function connectWithRetry(retries: number, delay: number) {
     for (let i = 0; i < retries; i++) {
