@@ -3,7 +3,7 @@ const Mapper = cassandra.mapping.Mapper;
 
 import { CassandraClient } from "./CassandraClient"
 
-class Reaction {
+export class Reaction {
   user_id: cassandra.types.Uuid;
   reaction: string;
 
