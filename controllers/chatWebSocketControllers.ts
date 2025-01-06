@@ -2,6 +2,7 @@ import { Socket } from "socket.io";
 import cassandra from "cassandra-driver";
 
 import { createMessage } from "../services/messageServices";
+import { getChats } from "../backend_api/chat_api";
 
 function ping(socket: Socket) {
   return (callback: Function) => {
@@ -56,9 +57,24 @@ export function chatMessageEventSubscribe(socket: Socket) {
   return processor;
 }
 
-// export async function setChatRooms(socket) {
-//   const chats = await getChatsWithLastMessages(socket.user);  
-//   for (const chat of chats) {    
-//     socket.join(getChatRoomName(chat.chatType, chat._id));
-//   }
-// }
+function setChatRooms(socket: Socket) : (...any: any[]) => Promise<void> {
+  return async (token: any, callback: Function) => {
+    if (typeof token != "string") {
+      throw new Error("No token");
+    } else {
+      const chats = await getChats(token);      
+      for (const chat of chats) {
+        socket.join(chat._id);
+      }
+      if (callback) {
+        callback(chats);
+      }
+    }
+  }
+}
+
+export function setChatRoomsEventSubscribe(socket: Socket) : (...any: any[]) => Promise<void> {
+  const processor = setChatRooms(socket);
+  socket.on("set chat rooms", processor);
+  return processor;
+}
