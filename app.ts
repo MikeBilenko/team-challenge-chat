@@ -7,7 +7,7 @@ import { createServer } from "node:http";
 import { Server, Socket } from "socket.io";
 
 import { CassandraClient, connectWithRetry } from "./models/CassandraClient";
-import { chatMessageEventSubscribe, pingEventSubscribe, setChatRoomsEventSubscribe } from "./controllers/chatWebSocketControllers";
+import { chatMessageEventSubscribe, getMessagesBeforeEventSubscribe, pingEventSubscribe, setChatRoomsEventSubscribe } from "./controllers/chatWebSocketControllers";
 
 const fs = require("fs")
 const YAML = require('yaml')
@@ -48,6 +48,7 @@ io.on("connection", (socket) => {
   setChatRoomsEventSubscribe(socket);
   pingEventSubscribe(socket);
   chatMessageEventSubscribe(socket);
+  getMessagesBeforeEventSubscribe(socket);
 });
 
 app.get("/chat", (_, res) => {
@@ -58,18 +59,28 @@ app.get("/chat", (_, res) => {
   socket.emit("ping", ()=>{console.log("pong delivered to server")});
   socket.on("pong", ()=>{console.log("pong")});
 
-  socket.emit("set chat rooms", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzA0NDdhMGEwYmNiODQ3MGQ5MjhlZSIsImlhdCI6MTczNTQxMzAxMiwiZXhwIjoxNzM1NDE2NjEyfQ.rUjHAldTEAhwpSJO3GEx0BFfbwiTKN2cwHDB2NeQF7s", (chats)=>{console.log(chats)});
+  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzA0NDdhMGEwYmNiODQ3MGQ5MjhlZSIsImlhdCI6MTczNjE3MDY4MiwiZXhwIjoxNzM2MTc0MjgyfQ.pu27VZ3Hg5xoFDqvpPDjndc5CMmAW_VGjTaOaEDUKaY";
 
-  const input = document.getElementById("chatInput");
-  input.onchange = () => {
-    console.log(input.value);
-    const message = document.createElement("p");
-    message.innerHTML = input.value;
-    document.body.insertBefore(message, document.body.lastElement);
-    socket.emit("chat message", { message: input.value}, ()=>{
-      console.log("chat message delivered")
-    });
-  }
+  socket.emit("set chat rooms", token, (chats)=>{
+    console.log(chats);
+
+    const input = document.getElementById("chatInput");
+    input.onchange = () => {
+      console.log(input.value);
+      const message = document.createElement("p");
+      message.innerHTML = input.value;
+      document.body.insertBefore(message, document.body.lastElement);
+      socket.emit("chat message", token, { message: input.value, chat_id: chats[0]._id }, ()=>{
+        console.log("chat message delivered")
+      });
+    }
+
+    socket.emit(
+        "get messages before", 
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzA0NDdhMGEwYmNiODQ3MGQ5MjhlZSIsImlhdCI6MTczNTQxMzAxMiwiZXhwIjoxNzM1NDE2NjEyfQ.rUjHAldTEAhwpSJO3GEx0BFfbwiTKN2cwHDB2NeQF7s", 
+        chats[0]._id, Date.now(), (messages)=>{console.log(messages)});
+  });
+
 
   socket.on("chat message", (messageObject) => {
     const message = document.createElement("p");
