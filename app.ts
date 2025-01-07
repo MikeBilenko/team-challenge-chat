@@ -14,7 +14,7 @@ const YAML = require('yaml')
 
 dotenv.config();
 
-const { DB_HOST, PORT = 4000 } = process.env;
+const { PORT = 4000 } = process.env;
 
 const app = express();
 
@@ -38,11 +38,8 @@ const io = new Server(server, {
       "http://localhost:5173",
     ],
   },
+  maxHttpBufferSize: 1e8,
 });
-
-// TODO middlewares
-// io.use(authenticateSocket);
-// io.use(authorizeSocketForRole("verified"));
 
 io.on("connection", (socket) => {
   setChatRoomsEventSubscribe(socket);
