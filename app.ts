@@ -59,7 +59,7 @@ app.get("/chat", (_, res) => {
   socket.emit("ping", ()=>{console.log("pong delivered to server")});
   socket.on("pong", ()=>{console.log("pong")});
 
-  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzA0NDdhMGEwYmNiODQ3MGQ5MjhlZSIsImlhdCI6MTczNjE3MDY4MiwiZXhwIjoxNzM2MTc0MjgyfQ.pu27VZ3Hg5xoFDqvpPDjndc5CMmAW_VGjTaOaEDUKaY";
+  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzA0NDdhMGEwYmNiODQ3MGQ5MjhlZSIsImlhdCI6MTczNjE3NDc5MiwiZXhwIjoxNzM2MTc4MzkyfQ.fjLDIaLrbirX7Nyt0kVO4JnC_1ndd6nr-_gAxC5AJnU";
 
   socket.emit("set chat rooms", token, (chats)=>{
     console.log(chats);

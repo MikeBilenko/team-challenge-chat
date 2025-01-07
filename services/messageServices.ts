@@ -22,5 +22,5 @@ export async function createMessage(messageObj: {
 }
 
 export function getMessagesBeforeDate(chat_id: string, date: Date) : Promise<Message[]> {
-  return MessageModel.find({chat_id, created_at: q.lte(date)});
+  return MessageModel.find({chat_id, created_at: q.lte(date)}, undefined, { fetchSize: 20 });
 }
