@@ -8,6 +8,7 @@ import { Server, Socket } from "socket.io";
 
 import { CassandraClient, connectWithRetry } from "./models/CassandraClient";
 import { chatMessageEventSubscribe, getMessagesBeforeEventSubscribe, pingEventSubscribe, setChatRoomsEventSubscribe } from "./controllers/chatWebSocketControllers";
+import { MessageModel } from "./models/Message";
 
 const fs = require("fs")
 const YAML = require('yaml')
@@ -38,7 +39,7 @@ const io = new Server(server, {
       "http://localhost:5173",
     ],
   },
-  maxHttpBufferSize: 1e8,
+  maxHttpBufferSize: 1e8, // for images
 });
 
 io.on("connection", (socket) => {
@@ -91,6 +92,7 @@ app.get("/chat", (_, res) => {
 
 
 connectWithRetry(5, 5000).then(async () => {
+  await MessageModel.addTestMessage();
   server.listen(PORT, () => {
     console.log(`Server is running. Use our API on port: ${PORT}`);
   });
