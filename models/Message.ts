@@ -51,8 +51,8 @@ const messageMapper = mapper.forModel('Message');
 export class MessageModel {
   public static async addTestMessage() {
     const messageId = cassandra.types.Uuid.random(); // Generate a random UUID for the message ID
-    const userId = "test_user_id"; // Generate a random UUID for user ID
-    const chatId = "test_chat_id"; // Generate a random UUID for chat ID
+    const userId = "test_user_id";
+    const chatId = "test_chat_id";
   
     const newMessage = new Message({
         id: messageId,
@@ -66,7 +66,7 @@ export class MessageModel {
     });
   
     try {
-        await messageMapper.insert(newMessage); // Insert the new message
+        await messageMapper.insert(newMessage);
         console.log('Message added successfully');
     } catch (error) {
         console.error('Error adding message:', error);
