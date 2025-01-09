@@ -1,7 +1,7 @@
 import { Socket } from "socket.io";
 import cassandra from "cassandra-driver";
 
-import { createMessage, getMessageById, getMessagesBeforeDate, removeMessageById } from "../services/messageServices";
+import { createMessage, getMessageById, getMessagesBeforeDate, removeMessageById, updateMessage } from "../services/messageServices";
 import { getChats, userIsInChat } from "../backend_api/chat_api";
 import { writeFile } from "fs";
 import { uploadToCloudinary } from "../services/cloudinary";
@@ -155,5 +155,45 @@ function deleteChatMessage(socket: Socket) {
 export function deleteChatMessageEventSubscribe(socket: Socket) {
   const processor = deleteChatMessage(socket);
   socket.on("delete chat message", processor);
+  return processor;
+}
+
+function updateChatMessage(socket: Socket) {
+  return async (token: string, incomingMessageObject: any, callback: Function) => {
+    const message = await getMessageById(incomingMessageObject.chat_id, incomingMessageObject.id, incomingMessageObject.created_at);
+    
+    if (typeof(message) == "undefined") {
+      if (callback) {
+        callback("Error: No such message");
+      }
+      return;
+    }
+
+    const user = await getUser(token);
+
+    if (user._id != message.user_id) {
+      if (callback) {
+        callback("Error: User does not have permission to update this message");
+      }
+      return;
+    }
+    
+    await updateMessage(incomingMessageObject);
+    
+    if (false) {
+      socket.to(message!.chat_id.toString()).emit("delete chat message", message!.id);
+    } else { // TODO remove "else"
+      socket.broadcast.emit("update chat message", message.id);
+    }
+
+    if (typeof(callback) == "function") {
+      callback(message);
+    }
+  }
+}
+
+export function updateChatMessageEventSubscribe(socket: Socket) {
+  const processor = updateChatMessage(socket);
+  socket.on("update chat message", processor);
   return processor;
 }

@@ -2,16 +2,18 @@
 <input type="text" id="chatInput">
 <input type="file" id="fileInput" multiple>
 <input type="button" id="deleteLastMessage" value="Delete last message">
+<input type="button" id="updateLastMessage" value="Update last message">
 <script>
   const socket = io(); // put URL as a parameter
   socket.emit("ping", ()=>{console.log("pong delivered to server")});
   socket.on("pong", ()=>{console.log("pong")});
 
-  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzA0NDdhMGEwYmNiODQ3MGQ5MjhlZSIsImlhdCI6MTczNjQzNjg5NywiZXhwIjoxNzM2NDQwNDk3fQ.MeSXKS_shoN9G3jN9JmLE5dK_J4czZEG-K3v84mAHE4";
+  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzA0NDdhMGEwYmNiODQ3MGQ5MjhlZSIsImlhdCI6MTczNjQ0NDgxNiwiZXhwIjoxNzM2NDQ4NDE2fQ.cpnRVrm8YSdwWjYpeRKhE8Xmt2YxfOFLt9G_DcdpEhg";
   
   const input = document.getElementById("chatInput");
   const fileInput = document.getElementById("fileInput");
   const deleteLastMessage = document.getElementById("deleteLastMessage");
+  const updateLastMessage = document.getElementById("updateLastMessage");
 
   socket.emit("set chat rooms", token, (chats)=>{
     console.log(chats);
@@ -44,6 +46,11 @@
     
     deleteLastMessage.onclick = (e) => {
       socket.emit("delete chat message", token, lastMessages[lastMessages.length - 1], (res) => {console.log(res)});
+    }
+    updateLastMessage.onclick = (e) => {
+      let message = lastMessages[lastMessages.length - 1];
+      message.text = "Updated message";
+      socket.emit("update chat message", token, message, (res) => {console.log(res)});
     }
   });
 

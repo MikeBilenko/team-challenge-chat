@@ -120,4 +120,15 @@ export class MessageModel {
       console.error('Error removing message:', error);
     }
   }
+
+  public static async update(doc: { [key: string]: any; }, 
+    docInfo?: cassandra.mapping.InsertDocInfo, 
+    executionOptions?: string | cassandra.mapping.MappingExecutionOptions
+  ) {
+    try {
+      messageMapper.update(doc, docInfo, executionOptions);
+    } catch (error) {
+      console.error('Error updating message:', error);
+    }
+  }
 }

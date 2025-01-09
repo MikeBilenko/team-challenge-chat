@@ -32,3 +32,15 @@ export function getMessageById(chat_id: string, message_id: cassandra.types.Uuid
 export function removeMessageById(chat_id: string, message_id: cassandra.types.Uuid, created_at: number) : Promise<void> {
   return MessageModel.remove({chat_id, id: message_id, created_at});
 }
+
+export function updateMessage(updatedMessage: Message) : Promise<void> {
+  return MessageModel.update({
+    // PK
+    chat_id: updatedMessage.chat_id, id: updatedMessage.id, 
+    created_at: updatedMessage.created_at, 
+    // fields to update
+    text: updatedMessage.text,
+    images: updatedMessage.images,
+    responds_to_message_id: updatedMessage.responds_to_message_id,
+  });
+}
