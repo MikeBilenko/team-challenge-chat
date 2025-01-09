@@ -3,12 +3,16 @@ import cassandra from "cassandra-driver";
 
 import { createMessage, getMessagesBeforeDate } from "../services/messageServices";
 import { getChats, userIsInChat } from "../backend_api/chat_api";
+import { writeFile } from "fs";
+import { uploadToCloudinary } from "../services/cloudinary";
 
 function ping(socket: Socket) {
   return (callback: Function) => {
     console.log("ping");
     socket.broadcast.emit("pong");
-    callback();
+    if (typeof(callback) == "function") {
+      callback();
+    }
   }
 }
 
@@ -27,10 +31,21 @@ function chatMessage(socket: Socket) {
     }
     const user_id = user._id;
     const chat_id = incomingMessageObject.chat_id;
+
+    let images: string[] = [];
+    if (incomingMessageObject.images) {
+      for (let i = 0; incomingMessageObject.images[i]; i++) {
+        let file = incomingMessageObject.images[i];
+        images.push(await uploadToCloudinary(file));
+      }
+    }
+
+    console.log(images);
+
     let messageObject = (await createMessage({
       user_id: user_id, 
       text: messageText,
-      images: [], // TODO: add images
+      images: images, // TODO: add images
       responds_to_message_id: incomingMessageObject.responds_to_message_id,
       reactions: [],
       chat_id: chat_id,
@@ -45,7 +60,9 @@ function chatMessage(socket: Socket) {
     } else { // TODO remove "else"
       socket.broadcast.emit("chat message", outgoingMessage);
     }
-    callback();
+    if (typeof(callback) == "function") {
+      callback(messageObject);
+    }
   }
 }
 
@@ -68,9 +85,7 @@ function setChatRooms(socket: Socket) : (...any: any[]) => Promise<void> {
       } else {
         throw new Error("No chats returned from backend service");
       }
-      if (callback) {
-        callback(chats);
-      }
+      callback(chats);
     }
   }
 }
@@ -89,11 +104,7 @@ function getMessagesBefore(socket: Socket) : (...any: any[]) => Promise<void> {
       const user = await userIsInChat(token, chat_id);
       if (user) {
         const messages = await getMessagesBeforeDate(chat_id, date);
-        if (callback) {
-          callback(messages);
-        }
-      } else {
-        callback();
+        callback(messages);
       }
     }
   }

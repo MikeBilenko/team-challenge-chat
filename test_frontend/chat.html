@@ -1,16 +1,19 @@
 <script src="/socket.io/socket.io.js"></script>
 <input type="text" id="chatInput">
+<input type="file" id="fileInput" multiple>
 <script>
   const socket = io(); // put URL as a parameter
   socket.emit("ping", ()=>{console.log("pong delivered to server")});
   socket.on("pong", ()=>{console.log("pong")});
 
-  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzA0NDdhMGEwYmNiODQ3MGQ5MjhlZSIsImlhdCI6MTczNjI3NjY3MSwiZXhwIjoxNzM2MjgwMjcxfQ.FmTwybUGdVq-gG__tR1xNpg-ad2TKuQ94ysW5-iR0t4";
+  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzA0NDdhMGEwYmNiODQ3MGQ5MjhlZSIsImlhdCI6MTczNjI4MTE1NywiZXhwIjoxNzM2Mjg0NzU3fQ.e-wIvYD3pzFX9yfr0_mt9OL7YRj8Vfir77qzmiw3AAA";
+  
+  const input = document.getElementById("chatInput");
+  const fileInput = document.getElementById("fileInput");
 
   socket.emit("set chat rooms", token, (chats)=>{
     console.log(chats);
 
-    const input = document.getElementById("chatInput");
     input.onchange = () => {
       console.log(input.value);
       const message = document.createElement("p");
@@ -19,6 +22,12 @@
       socket.emit("chat message", token, { message: input.value, chat_id: chats[0]._id }, ()=>{
         console.log("chat message delivered")
       });
+    }
+
+    fileInput.onchange = (e) => {
+      console.log(fileInput.files);
+      
+      socket.emit("chat message", token, { message: input.value, chat_id: chats[0]._id, images: fileInput.files });
     }
 
     socket.emit(
