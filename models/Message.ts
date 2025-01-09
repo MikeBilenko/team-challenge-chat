@@ -109,4 +109,15 @@ export class MessageModel {
       console.error('Error inserting message:', error);
     }
   }
+
+  public static async remove(doc: { [key: string]: any; }, 
+    docInfo?: cassandra.mapping.InsertDocInfo, 
+    executionOptions?: string | cassandra.mapping.MappingExecutionOptions
+  ) {
+    try {
+      messageMapper.remove(doc, docInfo, executionOptions);
+    } catch (error) {
+      console.error('Error removing message:', error);
+    }
+  }
 }

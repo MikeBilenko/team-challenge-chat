@@ -1,10 +1,12 @@
 import { Socket } from "socket.io";
 import cassandra from "cassandra-driver";
 
-import { createMessage, getMessagesBeforeDate } from "../services/messageServices";
+import { createMessage, getMessageById, getMessagesBeforeDate, removeMessageById } from "../services/messageServices";
 import { getChats, userIsInChat } from "../backend_api/chat_api";
 import { writeFile } from "fs";
 import { uploadToCloudinary } from "../services/cloudinary";
+import { MessageModel } from "../models/Message";
+import { getUser } from "../backend_api/user_api";
 
 function ping(socket: Socket) {
   return (callback: Function) => {
@@ -113,5 +115,45 @@ function getMessagesBefore(socket: Socket) : (...any: any[]) => Promise<void> {
 export function getMessagesBeforeEventSubscribe(socket: Socket) : (...any: any[]) => Promise<void> {
   const processor = getMessagesBefore(socket);
   socket.on("get messages before", processor);
+  return processor;
+}
+
+function deleteChatMessage(socket: Socket) {
+  return async (token: string, incomingMessageObject: any, callback: Function) => {
+    const message = await getMessageById(incomingMessageObject.chat_id, incomingMessageObject.id, incomingMessageObject.created_at);
+    
+    if (typeof(message) == "undefined") {
+      if (callback) {
+        callback("Error: No such message");
+      }
+      return;
+    }
+
+    const user = await getUser(token);
+
+    if (user._id != message.user_id) {
+      if (callback) {
+        callback("Error: User does not have permission to delete this message");
+      }
+      return;
+    }
+
+    await removeMessageById(message.chat_id, message.id, message.created_at);
+    
+    if (false) {
+      socket.to(message!.chat_id.toString()).emit("delete chat message", message!.id);
+    } else { // TODO remove "else"
+      socket.broadcast.emit("delete chat message", message.id);
+    }
+
+    if (typeof(callback) == "function") {
+      callback(message);
+    }
+  }
+}
+
+export function deleteChatMessageEventSubscribe(socket: Socket) {
+  const processor = deleteChatMessage(socket);
+  socket.on("delete chat message", processor);
   return processor;
 }

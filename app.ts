@@ -7,7 +7,7 @@ import { createServer } from "node:http";
 import { Server, Socket } from "socket.io";
 
 import { CassandraClient, connectWithRetry } from "./models/CassandraClient";
-import { chatMessageEventSubscribe, getMessagesBeforeEventSubscribe, pingEventSubscribe, setChatRoomsEventSubscribe } from "./controllers/chatWebSocketControllers";
+import { chatMessageEventSubscribe, deleteChatMessageEventSubscribe, getMessagesBeforeEventSubscribe, pingEventSubscribe, setChatRoomsEventSubscribe } from "./controllers/chatWebSocketControllers";
 import { MessageModel } from "./models/Message";
 
 const fs = require("fs")
@@ -47,6 +47,7 @@ io.on("connection", (socket) => {
   pingEventSubscribe(socket);
   chatMessageEventSubscribe(socket);
   getMessagesBeforeEventSubscribe(socket);
+  deleteChatMessageEventSubscribe(socket);
 });
 
 app.get("/chat", (_, res) => {
