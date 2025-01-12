@@ -2,7 +2,7 @@ import { Socket } from "socket.io";
 import cassandra from "cassandra-driver";
 
 import { createMessage, getMessageById, getMessagesBeforeDate, removeMessageById, updateMessage } from "../services/messageServices";
-import { getChats, userIsInChat } from "../backend_api/chat_api";
+import { getChats, userIsInChat, userIsModeratorInChat } from "../backend_api/chat_api";
 import { writeFile } from "fs";
 import { uploadToCloudinary } from "../services/cloudinary";
 import { MessageModel } from "../models/Message";
@@ -130,8 +130,11 @@ function deleteChatMessage(socket: Socket) {
     }
 
     const user = await getUser(token);
+    const isModeratorResponse = await userIsModeratorInChat(token, message.chat_id);    
+    const isModerator = isModeratorResponse != null && isModeratorResponse.message == null;
+    
 
-    if (user._id != message.user_id) {
+    if (user._id != message.user_id && !isModerator) {
       if (callback) {
         callback("Error: User does not have permission to delete this message");
       }

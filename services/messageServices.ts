@@ -22,7 +22,9 @@ export async function createMessage(messageObj: {
 }
 
 export function getMessagesBeforeDate(chat_id: string, date: Date) : Promise<Message[]> {
-  return MessageModel.find({chat_id, created_at: q.lte(date)}, undefined, { fetchSize: 20 });
+  return MessageModel.find({chat_id, created_at: q.lte(date)},
+  undefined,
+  { fetchSize: 20 });
 }
 
 export function getMessageById(chat_id: string, message_id: cassandra.types.Uuid, created_at: number) : Promise<Message | undefined> {

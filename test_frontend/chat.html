@@ -8,7 +8,7 @@
   socket.emit("ping", ()=>{console.log("pong delivered to server")});
   socket.on("pong", ()=>{console.log("pong")});
 
-  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzA0NDdhMGEwYmNiODQ3MGQ5MjhlZSIsImlhdCI6MTczNjQ0NDgxNiwiZXhwIjoxNzM2NDQ4NDE2fQ.cpnRVrm8YSdwWjYpeRKhE8Xmt2YxfOFLt9G_DcdpEhg";
+  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzA0NDdhMGEwYmNiODQ3MGQ5MjhlZSIsImlhdCI6MTczNjcwMDk2MCwiZXhwIjoxNzM2NzA0NTYwfQ.D0-T98lR-pOFug2dDNMn_wFbxuSqmrH5pAcClwnf7QA";
   
   const input = document.getElementById("chatInput");
   const fileInput = document.getElementById("fileInput");
@@ -45,10 +45,10 @@
 
     
     deleteLastMessage.onclick = (e) => {
-      socket.emit("delete chat message", token, lastMessages[lastMessages.length - 1], (res) => {console.log(res)});
+      socket.emit("delete chat message", token, lastMessages[0], (res) => {console.log(res)});
     }
     updateLastMessage.onclick = (e) => {
-      let message = lastMessages[lastMessages.length - 1];
+      let message = lastMessages[0];
       message.text = "Updated message";
       socket.emit("update chat message", token, message, (res) => {console.log(res)});
     }
