@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import swaggerUi from "swagger-ui-express";
 import { createServer } from "node:http";
 import { Server, Socket } from "socket.io";
+dotenv.config();
 
 import { CassandraClient, connectWithRetry } from "./models/CassandraClient";
 import { chatMessageEventSubscribe, deleteChatMessageEventSubscribe, getMessagesBeforeEventSubscribe, pingEventSubscribe, setChatRoomsEventSubscribe, updateChatMessageEventSubscribe } from "./controllers/chatWebSocketControllers";
@@ -13,7 +14,6 @@ import { MessageModel } from "./models/Message";
 const fs = require("fs")
 const YAML = require('yaml')
 
-dotenv.config();
 
 const { PORT = 4000 } = process.env;
 
