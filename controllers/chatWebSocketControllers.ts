@@ -85,7 +85,7 @@ function setChatRooms(socket: Socket) : (...any: any[]) => Promise<void> {
           socket.join(chat._id);
         }
       } else {
-        throw new Error("No chats returned from backend service");
+        // throw new Error("No chats returned from backend service");
       }
       callback(chats);
     }
