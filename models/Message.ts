@@ -4,10 +4,10 @@ const Mapper = cassandra.mapping.Mapper;
 import { CassandraClient } from "./CassandraClient"
 
 export class Reaction {
-  user_id: cassandra.types.Uuid;
+  user_id: string;
   reaction: string;
 
-  constructor(obj: { user_id: cassandra.types.Uuid, reaction: string }) {
+  constructor(obj: { user_id: string, reaction: string }) {
     this.user_id = obj.user_id;
     this.reaction = obj.reaction;
   }
@@ -15,21 +15,21 @@ export class Reaction {
 
 export class Message {
   id: cassandra.types.Uuid;
-  user_id: cassandra.types.Uuid;
+  user_id: string;
   text: string;
   images: string[];
   responds_to_message_id: cassandra.types.Uuid | null;
   reactions: Reaction[];
-  chat_id: cassandra.types.Uuid;
+  chat_id: string;
   created_at: number;
 
   constructor(obj: { id: cassandra.types.Uuid, 
-    user_id: cassandra.types.Uuid, 
+    user_id: string, 
     text: string;
     images: string[],
     responds_to_message_id: cassandra.types.Uuid | null,
     reactions: Reaction[],
-    chat_id: cassandra.types.Uuid,
+    chat_id: string,
     created_at: number }) {
     this.id = obj.id;
     this.user_id = obj.user_id;
@@ -50,9 +50,9 @@ const messageMapper = mapper.forModel('Message');
 
 export class MessageModel {
   public static async addTestMessage() {
-    const chatId = cassandra.types.Uuid.fromString("653e0101-b0be-4e2c-b7ec-9aa66699902f"); // Generate a random UUID for chat ID
     const messageId = cassandra.types.Uuid.random(); // Generate a random UUID for the message ID
-    const userId = cassandra.types.Uuid.random(); // Generate a random UUID for user ID
+    const userId = "test_user_id";
+    const chatId = "test_chat_id";
   
     const newMessage = new Message({
         id: messageId,
@@ -66,7 +66,7 @@ export class MessageModel {
     });
   
     try {
-        await messageMapper.insert(newMessage); // Insert the new message
+        await messageMapper.insert(newMessage);
         console.log('Message added successfully');
     } catch (error) {
         console.error('Error adding message:', error);
@@ -107,6 +107,28 @@ export class MessageModel {
       messageMapper.insert(doc, docInfo, executionOptions);
     } catch (error) {
       console.error('Error inserting message:', error);
+    }
+  }
+
+  public static async remove(doc: { [key: string]: any; }, 
+    docInfo?: cassandra.mapping.InsertDocInfo, 
+    executionOptions?: string | cassandra.mapping.MappingExecutionOptions
+  ) {
+    try {
+      messageMapper.remove(doc, docInfo, executionOptions);
+    } catch (error) {
+      console.error('Error removing message:', error);
+    }
+  }
+
+  public static async update(doc: { [key: string]: any; }, 
+    docInfo?: cassandra.mapping.InsertDocInfo, 
+    executionOptions?: string | cassandra.mapping.MappingExecutionOptions
+  ) {
+    try {
+      messageMapper.update(doc, docInfo, executionOptions);
+    } catch (error) {
+      console.error('Error updating message:', error);
     }
   }
 }

@@ -1,13 +1,20 @@
 import { Socket } from "socket.io";
 import cassandra from "cassandra-driver";
 
-import { createMessage } from "../services/messageServices";
+import { createMessage, getMessageById, getMessagesBeforeDate, removeMessageById, updateMessage } from "../services/messageServices";
+import { getChats, userIsInChat, userIsModeratorInChat } from "../backend_api/chat_api";
+import { writeFile } from "fs";
+import { uploadToCloudinary } from "../services/cloudinary";
+import { MessageModel } from "../models/Message";
+import { getUser } from "../backend_api/user_api";
 
 function ping(socket: Socket) {
   return (callback: Function) => {
     console.log("ping");
     socket.broadcast.emit("pong");
-    callback();
+    if (typeof(callback) == "function") {
+      callback();
+    }
   }
 }
 
@@ -17,21 +24,30 @@ export function pingEventSubscribe(socket: Socket) {
   return processor;
 }
 
-function getChatRoomName(chatType: String, chatId: String) {
-  return `${chatType}@${chatId}`;
-}
-
 function chatMessage(socket: Socket) {
-  return async (incomingMessageObject: any, callback: Function) => {
+  return async (token: string, incomingMessageObject: any, callback: Function) => {
     const messageText = incomingMessageObject.message;
-    // let user_id = socket.user._id;
-    let user_id = cassandra.types.Uuid.random();
-    // let chat_id = incomingMessageObject.chat_id;
-    let chat_id = cassandra.types.Uuid.random();
+    const user = await userIsInChat(token, incomingMessageObject.chat_id);
+    if (user.message) {
+      throw new Error(user.message);
+    }
+    const user_id = user._id;
+    const chat_id = incomingMessageObject.chat_id;
+
+    let images: string[] = [];
+    if (incomingMessageObject.images) {
+      for (let i = 0; incomingMessageObject.images[i]; i++) {
+        let file = incomingMessageObject.images[i];
+        images.push(await uploadToCloudinary(file));
+      }
+    }
+
+    console.log(images);
+
     let messageObject = (await createMessage({
       user_id: user_id, 
       text: messageText,
-      images: [], // TODO: add images
+      images: images, // TODO: add images
       responds_to_message_id: incomingMessageObject.responds_to_message_id,
       reactions: [],
       chat_id: chat_id,
@@ -46,7 +62,9 @@ function chatMessage(socket: Socket) {
     } else { // TODO remove "else"
       socket.broadcast.emit("chat message", outgoingMessage);
     }
-    callback();
+    if (typeof(callback) == "function") {
+      callback(messageObject);
+    }
   }
 }
 
@@ -56,9 +74,129 @@ export function chatMessageEventSubscribe(socket: Socket) {
   return processor;
 }
 
-// export async function setChatRooms(socket) {
-//   const chats = await getChatsWithLastMessages(socket.user);  
-//   for (const chat of chats) {    
-//     socket.join(getChatRoomName(chat.chatType, chat._id));
-//   }
-// }
+function setChatRooms(socket: Socket) : (...any: any[]) => Promise<void> {
+  return async (token: any, callback: Function) => {
+    if (typeof token != "string") {
+      throw new Error("No token");
+    } else {
+      const chats = await getChats(token);   
+      if (chats.length) {
+        for (const chat of chats) {
+          socket.join(chat._id);
+        }
+      } else {
+        // throw new Error("No chats returned from backend service");
+      }
+      callback(chats);
+    }
+  }
+}
+
+export function setChatRoomsEventSubscribe(socket: Socket) : (...any: any[]) => Promise<void> {
+  const processor = setChatRooms(socket);
+  socket.on("set chat rooms", processor);
+  return processor;
+}
+
+function getMessagesBefore(socket: Socket) : (...any: any[]) => Promise<void> {
+  return async (token: any, chat_id: string, date: Date, callback: Function) => {
+    if (typeof token != "string") {
+      throw new Error("No token");
+    } else {
+      const user = await userIsInChat(token, chat_id);
+      if (user) {
+        const messages = await getMessagesBeforeDate(chat_id, date);
+        callback(messages);
+      }
+    }
+  }
+}
+
+export function getMessagesBeforeEventSubscribe(socket: Socket) : (...any: any[]) => Promise<void> {
+  const processor = getMessagesBefore(socket);
+  socket.on("get messages before", processor);
+  return processor;
+}
+
+function deleteChatMessage(socket: Socket) {
+  return async (token: string, incomingMessageObject: any, callback: Function) => {
+    const message = await getMessageById(incomingMessageObject.chat_id, incomingMessageObject.id, incomingMessageObject.created_at);
+    
+    if (typeof(message) == "undefined") {
+      if (callback) {
+        callback("Error: No such message");
+      }
+      return;
+    }
+
+    const user = await getUser(token);
+    const isModeratorResponse = await userIsModeratorInChat(token, message.chat_id);    
+    const isModerator = isModeratorResponse != null && isModeratorResponse.message == null;
+    
+
+    if (user._id != message.user_id && !isModerator) {
+      if (callback) {
+        callback("Error: User does not have permission to delete this message");
+      }
+      return;
+    }
+
+    await removeMessageById(message.chat_id, message.id, message.created_at);
+    
+    if (false) {
+      socket.to(message!.chat_id.toString()).emit("delete chat message", message!.id);
+    } else { // TODO remove "else"
+      socket.broadcast.emit("delete chat message", message.id);
+    }
+
+    if (typeof(callback) == "function") {
+      callback(message);
+    }
+  }
+}
+
+export function deleteChatMessageEventSubscribe(socket: Socket) {
+  const processor = deleteChatMessage(socket);
+  socket.on("delete chat message", processor);
+  return processor;
+}
+
+function updateChatMessage(socket: Socket) {
+  return async (token: string, incomingMessageObject: any, callback: Function) => {
+    const message = await getMessageById(incomingMessageObject.chat_id, incomingMessageObject.id, incomingMessageObject.created_at);
+    
+    if (typeof(message) == "undefined") {
+      if (callback) {
+        callback("Error: No such message");
+      }
+      return;
+    }
+
+    const user = await getUser(token);
+
+    if (user._id != message.user_id) {
+      if (callback) {
+        callback("Error: User does not have permission to update this message");
+      }
+      return;
+    }
+    
+    await updateMessage(incomingMessageObject);
+    
+    if (false) {
+      socket.to(message!.chat_id.toString()).emit("delete chat message", message!.id);
+    } else { // TODO remove "else"
+      socket.broadcast.emit("update chat message", message.id);
+    }
+
+    if (typeof(callback) == "function") {
+      callback(message);
+    }
+  }
+}
+
+export function updateChatMessageEventSubscribe(socket: Socket) {
+  const processor = updateChatMessage(socket);
+  socket.on("update chat message", processor);
+  return processor;
+}

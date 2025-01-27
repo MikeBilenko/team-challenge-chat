@@ -2,7 +2,18 @@ import cassandra from "cassandra-driver";
 const Client = cassandra.Client;
 const Mapper = cassandra.mapping.Mapper;
 
-const CassandraClient = new Client({ contactPoints: ["cassandra-container"], localDataCenter: "datacenter1", keyspace: "chat", credentials: { username: 'cassandra', password: 'cassandra' } });
+// const CassandraClient = new Client({ contactPoints: ["cassandra-container"], localDataCenter: "datacenter1", keyspace: "chat", credentials: { username: 'cassandra', password: 'cassandra' } });
+
+const CassandraClient =new Client({
+    cloud: {
+    secureConnectBundle: "./models/secure-connect-team-challenge-chat.zip",
+    },
+    keyspace: "chat",
+    credentials: {
+        username: process.env.CASSANDRA_USERNAME!,
+        password: process.env.CASSANDRA_PASSWORD!,
+    },
+  })
 
 async function connectWithRetry(retries: number, delay: number) {
     for (let i = 0; i < retries; i++) {
