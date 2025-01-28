@@ -1,0 +1,15 @@
+name: My Deploy
+
+on:
+  push:
+    branches: [ initial_setup ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to production
+        uses: fjogeleit/http-request-action@v1
+        with:
+          url: 'https://api.render.com/deploy/srv-cucghvjqf0us73cbc940?key=-Q6PFM6SmN4'
+          method: 'GET'
