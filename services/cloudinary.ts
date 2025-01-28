@@ -22,6 +22,7 @@ export const uploadToCloudinary = async (file: any) => {
   writeFile(path.join(temporaryFolder, name), file, (err) => {
     console.log({ message: err ? err : "success writing file" });
   });
+  let uploadError: any;
   const image = await cloudinary.uploader
     .upload(
       path.join(temporaryFolder, name), {
@@ -30,12 +31,20 @@ export const uploadToCloudinary = async (file: any) => {
     )
     .catch((error) => {
       console.log(error);
+      uploadError = error;
     });
 
   // const optimizeUrl = cloudinary.url(name, {
   //     fetch_format: 'auto',
   //     quality: 'auto'
   // });
-  
-  return image!.url;
+  if (image) {
+    return image!.url;
+  } else {
+    if (uploadError) {
+      throw new Error(uploadError.message);
+    } else {
+      throw new Error("Unknown error uploading to cloudinary");
+    }
+  }
 }

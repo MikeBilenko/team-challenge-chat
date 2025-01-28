@@ -1,25 +1,23 @@
 import { Socket } from "socket.io";
-import cassandra from "cassandra-driver";
-
 import { createMessage, getMessageById, getMessagesBeforeDate, removeMessageById, updateMessage } from "../services/messageServices";
 import { getChats, userIsInChat, userIsModeratorInChat } from "../backend_api/chat_api";
-import { writeFile } from "fs";
 import { uploadToCloudinary } from "../services/cloudinary";
-import { MessageModel } from "../models/Message";
 import { getUser } from "../backend_api/user_api";
+import { Catch, CatchAsync } from "../middlewares/Catch";
 
 function ping(socket: Socket) {
   return (callback: Function) => {
     console.log("ping");
     socket.broadcast.emit("pong");
-    if (typeof(callback) == "function") {
+    if (callback instanceof Function) {
       callback();
     }
+    throw new Error("new error in ping");
   }
 }
 
 export function pingEventSubscribe(socket: Socket) {
-  const processor = ping(socket);
+  const processor = Catch(ping(socket));
   socket.on('ping', processor);
   return processor;
 }
@@ -36,9 +34,16 @@ function chatMessage(socket: Socket) {
 
     let images: string[] = [];
     if (incomingMessageObject.images) {
-      for (let i = 0; incomingMessageObject.images[i]; i++) {
-        let file = incomingMessageObject.images[i];
-        images.push(await uploadToCloudinary(file));
+      try {
+        for (let i = 0; incomingMessageObject.images[i]; i++) {
+          let file = incomingMessageObject.images[i];
+          images.push(await uploadToCloudinary(file));
+        }
+      } catch (error) {
+        console.log(error);
+        if (typeof(callback) == "function") {
+          callback(error);
+        }
       }
     }
 
@@ -69,7 +74,7 @@ function chatMessage(socket: Socket) {
 }
 
 export function chatMessageEventSubscribe(socket: Socket) {
-  const processor = chatMessage(socket);
+  const processor = CatchAsync(chatMessage(socket));
   socket.on("chat message", processor);
   return processor;
 }
@@ -93,7 +98,7 @@ function setChatRooms(socket: Socket) : (...any: any[]) => Promise<void> {
 }
 
 export function setChatRoomsEventSubscribe(socket: Socket) : (...any: any[]) => Promise<void> {
-  const processor = setChatRooms(socket);
+  const processor = CatchAsync(setChatRooms(socket));
   socket.on("set chat rooms", processor);
   return processor;
 }
@@ -113,7 +118,7 @@ function getMessagesBefore(socket: Socket) : (...any: any[]) => Promise<void> {
 }
 
 export function getMessagesBeforeEventSubscribe(socket: Socket) : (...any: any[]) => Promise<void> {
-  const processor = getMessagesBefore(socket);
+  const processor = CatchAsync(getMessagesBefore(socket));
   socket.on("get messages before", processor);
   return processor;
 }
@@ -156,7 +161,7 @@ function deleteChatMessage(socket: Socket) {
 }
 
 export function deleteChatMessageEventSubscribe(socket: Socket) {
-  const processor = deleteChatMessage(socket);
+  const processor = CatchAsync(deleteChatMessage(socket));
   socket.on("delete chat message", processor);
   return processor;
 }
@@ -196,7 +201,7 @@ function updateChatMessage(socket: Socket) {
 }
 
 export function updateChatMessageEventSubscribe(socket: Socket) {
-  const processor = updateChatMessage(socket);
+  const processor = CatchAsync(updateChatMessage(socket));
   socket.on("update chat message", processor);
   return processor;
 }
