@@ -8,58 +8,78 @@
   socket.emit("ping", ()=>{console.log("pong delivered to server")});
   socket.on("pong", ()=>{console.log("pong")});
 
-  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzA0NDdhMGEwYmNiODQ3MGQ5MjhlZSIsImlhdCI6MTczNzQ4NTE2OSwiZXhwIjoxNzM3NDg4NzY5fQ.mG9InnTYAX-XJbB_BI2ZmSs68pkdw73qSyNX319TC0M";
+  async function getToken() {
+    const url = new URL("/auth/login", "https://team-challenge-backend-c55i.onrender.com/").href;  
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({"email": "Password1@email.com", "password": "Password1"}),
+    });
+    const json = await res.json();
+    console.log(json);
+    return json.tokens.accessToken;
+  }
+
+  async function onPageLoad() {
+    const token = await getToken();
+    console.log(token);
+    
+    const input = document.getElementById("chatInput");
+    const fileInput = document.getElementById("fileInput");
+    const deleteLastMessage = document.getElementById("deleteLastMessage");
+    const updateLastMessage = document.getElementById("updateLastMessage");
   
-  const input = document.getElementById("chatInput");
-  const fileInput = document.getElementById("fileInput");
-  const deleteLastMessage = document.getElementById("deleteLastMessage");
-  const updateLastMessage = document.getElementById("updateLastMessage");
-
-  socket.emit("set chat rooms", token, (chats)=>{
-    console.log(chats);
-
-    input.onchange = () => {
-      console.log(input.value);
+    socket.emit("set chat rooms", token, (chats)=>{
+      console.log(chats);
+  
+      input.onchange = () => {
+        console.log(input.value);
+        const message = document.createElement("p");
+        message.innerHTML = input.value;
+        document.body.insertBefore(message, document.body.lastElement);
+        socket.emit("chat message", token, { message: input.value, chat_id: chats[0]._id }, ()=>{
+          console.log("chat message delivered")
+        });
+      }
+  
+      fileInput.onchange = (e) => {
+        console.log(fileInput.files);
+        const message = document.createElement("p");
+        message.innerHTML = input.value;
+        document.body.insertBefore(message, document.body.lastElement);
+        socket.emit("chat message", token, { message: input.value, chat_id: chats[0]._id, images: fileInput.files });
+      }
+  
+      let lastMessages;
+      
+      socket.emit(
+          "get messages before", 
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzA0NDdhMGEwYmNiODQ3MGQ5MjhlZSIsImlhdCI6MTczNTQxMzAxMiwiZXhwIjoxNzM1NDE2NjEyfQ.rUjHAldTEAhwpSJO3GEx0BFfbwiTKN2cwHDB2NeQF7s", 
+          chats[0]._id, Date.now(), (messages)=>{lastMessages = messages._rs.rows; console.log(messages)});
+  
+      
+      deleteLastMessage.onclick = (e) => {
+        socket.emit("delete chat message", token, lastMessages[0], (res) => {console.log(res)});
+      }
+      updateLastMessage.onclick = (e) => {
+        let message = lastMessages[0];
+        message.text = "Updated message";
+        socket.emit("update chat message", token, message, (res) => {console.log(res)});
+      }
+    });
+  
+  
+    socket.on("chat message", (messageObject) => {
       const message = document.createElement("p");
-      message.innerHTML = input.value;
+      console.log(messageObject);
+      message.innerHTML = messageObject.name + ": " + messageObject.text;
+      message.style.color = "blue";
       document.body.insertBefore(message, document.body.lastElement);
-      socket.emit("chat message", token, { message: input.value, chat_id: chats[0]._id }, ()=>{
-        console.log("chat message delivered")
-      });
-    }
+    });
+  }
 
-    fileInput.onchange = (e) => {
-      console.log(fileInput.files);
-      const message = document.createElement("p");
-      message.innerHTML = input.value;
-      document.body.insertBefore(message, document.body.lastElement);
-      socket.emit("chat message", token, { message: input.value, chat_id: chats[0]._id, images: fileInput.files });
-    }
-
-    let lastMessages;
-    
-    socket.emit(
-        "get messages before", 
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzA0NDdhMGEwYmNiODQ3MGQ5MjhlZSIsImlhdCI6MTczNTQxMzAxMiwiZXhwIjoxNzM1NDE2NjEyfQ.rUjHAldTEAhwpSJO3GEx0BFfbwiTKN2cwHDB2NeQF7s", 
-        chats[0]._id, Date.now(), (messages)=>{lastMessages = messages._rs.rows; console.log(messages)});
-
-    
-    deleteLastMessage.onclick = (e) => {
-      socket.emit("delete chat message", token, lastMessages[0], (res) => {console.log(res)});
-    }
-    updateLastMessage.onclick = (e) => {
-      let message = lastMessages[0];
-      message.text = "Updated message";
-      socket.emit("update chat message", token, message, (res) => {console.log(res)});
-    }
-  });
-
-
-  socket.on("chat message", (messageObject) => {
-    const message = document.createElement("p");
-    console.log(messageObject);
-    message.innerHTML = messageObject.name + ": " + messageObject.text;
-    message.style.color = "blue";
-    document.body.insertBefore(message, document.body.lastElement);
-  });
+  onPageLoad();
 </script>
