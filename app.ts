@@ -8,7 +8,7 @@ import { Server, Socket } from "socket.io";
 dotenv.config();
 
 import { CassandraClient, connectWithRetry } from "./models/CassandraClient";
-import { chatMessageEventSubscribe, deleteChatMessageEventSubscribe, getMessagesBeforeEventSubscribe, pingEventSubscribe, setChatRoomsEventSubscribe, updateChatMessageEventSubscribe } from "./controllers/chatWebSocketControllers";
+import { SocketEventHandler } from "./controllers/chatWebSocketControllers";
 import { MessageModel } from "./models/Message";
 
 const fs = require("fs")
@@ -43,12 +43,8 @@ const io = new Server(server, {
 });
 
 io.on("connection", (socket) => {
-  setChatRoomsEventSubscribe(socket);
-  pingEventSubscribe(socket);
-  chatMessageEventSubscribe(socket);
-  getMessagesBeforeEventSubscribe(socket);
-  deleteChatMessageEventSubscribe(socket);
-  updateChatMessageEventSubscribe(socket);
+  const socketEventHandler = new SocketEventHandler(socket);
+  socketEventHandler.subscribe();
 });
 
 app.get("/chat", (_, res) => {
