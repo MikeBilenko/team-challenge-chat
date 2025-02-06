@@ -144,10 +144,10 @@ export class SocketEventHandler {
     
     await updateMessage(incomingMessageObject);
     
-    this.socket.to(message!.chat_id.toString()).emit("update chat message", message);
+    this.socket.to(message!.chat_id.toString()).emit("update chat message", incomingMessageObject);
 
     if (typeof(callback) == "function") {
-      callback(message);
+      callback(incomingMessageObject);
     }
   }
 

@@ -91,7 +91,7 @@ export class MessageModel {
   ): Promise<Message[]> {
     try {
       const res = await messageMapper.find(doc, docInfo, executionOptions);
-      const messages = res as unknown as Message[];
+      const messages = res.toArray() as unknown as Message[];
       return messages;
     } catch (error) {
         console.error('Error fetching messages:', error);
@@ -104,7 +104,7 @@ export class MessageModel {
     executionOptions?: string | cassandra.mapping.MappingExecutionOptions
   ) {
     try {
-      messageMapper.insert(doc, docInfo, executionOptions);
+      await messageMapper.insert(doc, docInfo, executionOptions);
     } catch (error) {
       console.error('Error inserting message:', error);
     }
@@ -115,7 +115,7 @@ export class MessageModel {
     executionOptions?: string | cassandra.mapping.MappingExecutionOptions
   ) {
     try {
-      messageMapper.remove(doc, docInfo, executionOptions);
+      await messageMapper.remove(doc, docInfo, executionOptions);
     } catch (error) {
       console.error('Error removing message:', error);
     }
@@ -126,7 +126,7 @@ export class MessageModel {
     executionOptions?: string | cassandra.mapping.MappingExecutionOptions
   ) {
     try {
-      messageMapper.update(doc, docInfo, executionOptions);
+      await messageMapper.update(doc, docInfo, executionOptions);
     } catch (error) {
       console.error('Error updating message:', error);
     }

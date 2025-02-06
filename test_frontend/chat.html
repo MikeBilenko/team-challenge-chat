@@ -58,7 +58,7 @@
       socket.emit(
           "get messages before", 
           "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzA0NDdhMGEwYmNiODQ3MGQ5MjhlZSIsImlhdCI6MTczNTQxMzAxMiwiZXhwIjoxNzM1NDE2NjEyfQ.rUjHAldTEAhwpSJO3GEx0BFfbwiTKN2cwHDB2NeQF7s", 
-          chats[0]._id, Date.now(), (messages)=>{lastMessages = messages._rs.rows; console.log(messages)});
+          chats[0]._id, Date.now(), (messages)=>{lastMessages = messages; console.log(messages)});
   
       
       deleteLastMessage.onclick = (e) => {
