@@ -57,12 +57,12 @@ function chatMessage(socket: Socket) {
       reactions: [],
       chat_id: chat_id,
     }));
-    // const name = socket.user.name;
-    const name = "A";
-    // const profilePicture = socket.user.profile_picture || "https://res.cloudinary.com/dtonpxhk7/image/upload/v1727784788/fvqcrnaneokovnfwcgya.jpg";    
-    const profilePicture = "https://res.cloudinary.com/dtonpxhk7/image/upload/v1727784788/fvqcrnaneokovnfwcgya.jpg";    
+    const name = user.name;
+    // const name = "A";
+    const profilePicture = user.avatar || "https://res.cloudinary.com/dtonpxhk7/image/upload/v1727784788/fvqcrnaneokovnfwcgya.jpg";    
+    // const profilePicture = "https://res.cloudinary.com/dtonpxhk7/image/upload/v1727784788/fvqcrnaneokovnfwcgya.jpg";    
     const outgoingMessage = { name, profilePicture, ...messageObject }
-    if (false) {
+    if (true) {
       socket.to(messageObject.chat_id.toString()).emit("chat message", outgoingMessage);
     } else { // TODO remove "else"
       socket.broadcast.emit("chat message", outgoingMessage);
@@ -148,10 +148,10 @@ function deleteChatMessage(socket: Socket) {
 
     await removeMessageById(message.chat_id, message.id, message.created_at);
     
-    if (false) {
+    if (true) {
       socket.to(message!.chat_id.toString()).emit("delete chat message", message!.id);
     } else { // TODO remove "else"
-      socket.broadcast.emit("delete chat message", message.id);
+      socket.broadcast.emit("delete chat message", message!.id);
     }
 
     if (typeof(callback) == "function") {
@@ -188,10 +188,10 @@ function updateChatMessage(socket: Socket) {
     
     await updateMessage(incomingMessageObject);
     
-    if (false) {
-      socket.to(message!.chat_id.toString()).emit("delete chat message", message!.id);
+    if (true) {
+      socket.to(message!.chat_id.toString()).emit("update chat message", message);
     } else { // TODO remove "else"
-      socket.broadcast.emit("update chat message", message.id);
+      socket.broadcast.emit("update chat message", message);
     }
 
     if (typeof(callback) == "function") {

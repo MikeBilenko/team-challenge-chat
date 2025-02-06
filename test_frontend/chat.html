@@ -79,6 +79,14 @@
       message.style.color = "blue";
       document.body.insertBefore(message, document.body.lastElement);
     });
+
+    socket.on("delete chat message", (messageObject) => {
+      console.log(messageObject);
+    });
+
+    socket.on("update chat message", (messageObject) => {
+      console.log(messageObject);
+    });
   }
 
   onPageLoad();
