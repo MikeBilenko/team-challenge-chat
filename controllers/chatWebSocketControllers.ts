@@ -15,7 +15,7 @@ export class SocketEventHandler {
     if (callback instanceof Function) {
       callback();
     }
-    throw new Error("new error in ping");
+    // throw new Error("new error in ping");
   }
 
   @CatchAsync
