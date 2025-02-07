@@ -1,5 +1,7 @@
-export function Catch(target: Function, context: any) {
-  return function (this: any, ..._args: any[]) {
+import { SocketEventHandler } from "../controllers/chatWebSocketControllers";
+
+export function Catch(target: Function) {
+  return function (this: SocketEventHandler, ..._args: any[]) {
     try {
       target.call(this, ..._args);
     } catch (error) {
@@ -10,8 +12,8 @@ export function Catch(target: Function, context: any) {
   };
 }
 
-export function CatchAsync(target: (this: any, ..._: any[]) => Promise<any>) {
-  return async function (this: any, ..._args: any[]) {
+export function CatchAsync(target: (this: SocketEventHandler, ..._: any[]) => Promise<any>) {
+  return async function (this: SocketEventHandler, ..._args: any[]) {
     try {
       await target.call(this, ..._args);
     } catch (error) {
