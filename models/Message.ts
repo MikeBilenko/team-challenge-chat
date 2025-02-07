@@ -1,7 +1,7 @@
 import cassandra from "cassandra-driver";
 const Mapper = cassandra.mapping.Mapper;
 
-import { CassandraClient } from "./CassandraClient"
+import { CassandraClient, mapper } from "./CassandraClient"
 
 export class Reaction {
   user_id: string;
@@ -41,10 +41,6 @@ export class Message {
     this.created_at = obj.created_at;
   }
 }
-
-const mapper = new Mapper(CassandraClient, { 
-  models: { 'Message': { tables: ['messages'] } }
-});
 
 const messageMapper = mapper.forModel('Message');
 

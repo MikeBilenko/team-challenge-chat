@@ -4,9 +4,14 @@ import { getChats, userIsInChat, userIsModeratorInChat } from "../backend_api/ch
 import { uploadToCloudinary } from "../services/cloudinary";
 import { getUser } from "../backend_api/user_api";
 import { Catch, CatchAsync } from "../middlewares/Catch";
+import { setOnlineStatus } from "../services/onlineStatusServices";
 
 export class SocketEventHandler {
-  constructor(public socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>) {}
+  constructor(
+    public socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>,
+    private token?: string | undefined,
+    private chatIDs?: string[] | undefined
+  ) {}
 
   @Catch
   ping(callback: Function) {
@@ -15,7 +20,6 @@ export class SocketEventHandler {
     if (callback instanceof Function) {
       callback();
     }
-    // throw new Error("new error in ping");
   }
 
   @CatchAsync
@@ -61,19 +65,22 @@ export class SocketEventHandler {
   }
 
   @CatchAsync
-  async setChatRooms (token: any, callback: Function) {
-    if (token instanceof String) {
+  async setChatRoomsAndOnline (token: any, callback: Function) {
+    if (!token) {
       throw new Error("No token");
     } else {
-      const chats = await getChats(token);   
-      if (chats.length) {
-        for (const chat of chats) {
-          this.socket.join(chat._id);
-        }
-      } else {
-        // throw new Error("No chats returned from backend service");
+      this.token = token;
+      const user = await getUser(token);   
+      const chats = await getChats(token);
+      this.chatIDs = [];
+      for (const chat of chats) {
+        this.socket.join(chat._id);
+        this.chatIDs.push(chat._id);
+        this.socket.in(chat._id).emit("user online", user._id);
       }
+      setOnlineStatus(user._id, true);
       if (callback instanceof Function) {
+        // TODO attach online to chat info
         callback(chats);
       }
     }
@@ -151,17 +158,40 @@ export class SocketEventHandler {
     }
   }
 
-  pingEventListener(socket: any) {
-    return this.ping.bind({ socket });
+  @CatchAsync
+  async writing(token: any, chatID: any) {
+    const user = await getUser(token);
+    this.socket.volatile.in(chatID).emit("writing", user._id);
+  }
+
+  @CatchAsync
+  async disconnecting() {
+    if (!this.token) {
+      console.log("disconnecting user was not authorized");
+      return;
+    }
+    const user = await getUser(this.token);
+    if (!user._id) {
+      return;
+    }
+    await setOnlineStatus(user._id, false);
+    if (!this.chatIDs) {
+      return;
+    }
+    for (const chat of this.chatIDs) {
+      this.socket.in(chat).emit("user offline", user._id);
+    }
   }
 
   subscribe(): void {
     this.socket.on('ping', this.ping.bind(this));
     this.socket.on("chat message", this.chatMessage.bind(this));
-    this.socket.on("set chat rooms", this.setChatRooms.bind(this));
+    this.socket.on("set chat rooms", this.setChatRoomsAndOnline.bind(this));
     this.socket.on("get messages before", this.getMessagesBefore.bind(this));
     this.socket.on("delete chat message", this.deleteChatMessage.bind(this));
     this.socket.on("update chat message", this.updateChatMessage.bind(this));
+    this.socket.on("writing", this.writing.bind(this));
+    this.socket.on("disconnecting", this.disconnecting.bind(this))
   }
 
   unsubscrube() {

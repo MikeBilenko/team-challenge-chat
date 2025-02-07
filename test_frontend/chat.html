@@ -35,6 +35,10 @@
     socket.emit("set chat rooms", token, (chats)=>{
       console.log(chats);
   
+      input.onkeydown = () => {
+        socket.emit("writing", token, chats[0]._id);
+      }
+
       input.onchange = () => {
         console.log(input.value);
         const message = document.createElement("p");
@@ -86,6 +90,18 @@
 
     socket.on("update chat message", (messageObject) => {
       console.log(messageObject);
+    });
+
+    socket.on("writing", (userID) => {
+      console.log(userID, "is writing");
+    });
+
+    socket.on("user online", (userID) => {
+      console.log(userID, "online");
+    });
+
+    socket.on("user offline", (userID) => {
+      console.log(userID, "offline");
     });
   }
 
