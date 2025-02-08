@@ -186,7 +186,7 @@ export class SocketEventHandler {
   @Validate
   async writing(@val(validateToken) token: any, chatID: any) {
     const user = await getUser(token);
-    this.socket.volatile.in(chatID).emit("writing", user._id);
+    this.socket.volatile.in(chatID).emit("writing", user._id, chatID);
   }
 
   @CatchAsync
