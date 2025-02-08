@@ -44,7 +44,7 @@
         const message = document.createElement("p");
         message.innerHTML = input.value;
         document.body.insertBefore(message, document.body.lastElement);
-        socket.emit("chat message", token, { message: input.value, chat_id: chats[0]._id }, ()=>{
+        socket.emit("chat message", token, { text: input.value, chat_id: chats[0]._id }, ()=>{
           console.log("chat message delivered")
         });
       }
@@ -54,7 +54,7 @@
         const message = document.createElement("p");
         message.innerHTML = input.value;
         document.body.insertBefore(message, document.body.lastElement);
-        socket.emit("chat message", token, { message: input.value, chat_id: chats[0]._id, images: fileInput.files });
+        socket.emit("chat message", token, { text: input.value, chat_id: chats[0]._id, images: fileInput.files });
       }
   
       let lastMessages;
@@ -66,10 +66,13 @@
   
       
       deleteLastMessage.onclick = (e) => {
-        socket.emit("delete chat message", token, lastMessages[0], (res) => {console.log(res)});
+        let { id, chat_id, created_at } = lastMessages[0];
+        let message = { id, chat_id, created_at };
+        socket.emit("delete chat message", token, message, (res) => {console.log(res)});
       }
       updateLastMessage.onclick = (e) => {
-        let message = lastMessages[0];
+        let { id, chat_id, created_at, images, responds_to_message_id } = lastMessages[0];
+        let message = { id, chat_id, created_at, images, responds_to_message_id };
         message.text = "Updated message";
         socket.emit("update chat message", token, message, (res) => {console.log(res)});
       }

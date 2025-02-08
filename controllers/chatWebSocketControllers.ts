@@ -5,6 +5,10 @@ import { uploadToCloudinary } from "../services/cloudinary";
 import { getUser } from "../backend_api/user_api";
 import { Catch, CatchAsync } from "../middlewares/Catch";
 import { setOnlineStatus } from "../services/onlineStatusServices";
+import { val, Validate } from "../middlewares/Validate";
+import { validateToken } from "../schemas/validateToken";
+import { validateCallback } from "../schemas/validateCallback";
+import { deleteMessageSchema, incomingMessageSchema, updateMessageSchema } from "../schemas/messageSchemas";
 
 export class SocketEventHandler {
   constructor(
@@ -14,17 +18,23 @@ export class SocketEventHandler {
   ) {}
 
   @Catch
-  ping(callback: Function) {
+  @Validate
+  ping(@val(validateCallback) callback: Function | undefined) {
     console.log("ping");
     this.socket.broadcast.emit("pong");
-    if (callback instanceof Function) {
+    if (callback) {
       callback();
     }
   }
 
   @CatchAsync
-  async chatMessage(token: string, incomingMessageObject: any, callback: Function) {
-    const messageText = incomingMessageObject.message;
+  @Validate
+  async chatMessage(
+    @val(validateToken) token: string,
+    @val(incomingMessageSchema.validate.bind(incomingMessageSchema)) incomingMessageObject: any,
+    @val(validateCallback) callback: Function | undefined
+  ) {
+    const messageText = incomingMessageObject.text;
     const user = await userIsInChat(token, incomingMessageObject.chat_id);
     if (user.message) {
       throw new Error(user.message);
@@ -35,13 +45,13 @@ export class SocketEventHandler {
     let images: string[] = [];
     if (incomingMessageObject.images) {
       try {
-        for (let i = 0; incomingMessageObject.images[i]; i++) {
+        for (let i = 0; incomingMessageObject.images[i] && i < 10; i++) {
           let file = incomingMessageObject.images[i];
           images.push(await uploadToCloudinary(file));
         }
       } catch (error) {
         console.log(error);
-        if (typeof(callback) == "function") {
+        if (callback) {
           callback(error);
         }
       }
@@ -65,46 +75,55 @@ export class SocketEventHandler {
   }
 
   @CatchAsync
-  async setChatRoomsAndOnline (token: any, callback: Function) {
-    if (!token) {
-      throw new Error("No token");
-    } else {
-      this.token = token;
-      const user = await getUser(token);   
-      const chats = await getChats(token);
-      this.chatIDs = [];
-      for (const chat of chats) {
-        this.socket.join(chat._id);
-        this.chatIDs.push(chat._id);
-        this.socket.in(chat._id).emit("user online", user._id);
-      }
-      setOnlineStatus(user._id, true);
-      if (callback instanceof Function) {
-        // TODO attach online to chat info
-        callback(chats);
-      }
+  @Validate
+  async setChatRoomsAndOnline(
+    @val(validateToken) token: string, 
+    @val(validateCallback) callback: Function | undefined
+  ) {
+    this.token = token;
+    const user = await getUser(token);   
+    const chats = await getChats(token);
+    this.chatIDs = [];
+    for (const chat of chats) {
+      this.socket.join(chat._id);
+      this.chatIDs.push(chat._id);
+      this.socket.in(chat._id).emit("user online", user._id);
+    }
+    setOnlineStatus(user._id, true);
+    if (callback) {
+      // TODO attach online to chat info
+      callback(chats);
     }
   }
 
   @CatchAsync
-  async getMessagesBefore(token: any, chat_id: string, date: Date, callback: Function) {
-    if (typeof token != "string") {
-      throw new Error("No token");
-    } else {
-      const user = await userIsInChat(token, chat_id);
-      if (user) {
-        const messages = await getMessagesBeforeDate(chat_id, date);
+  @Validate
+  async getMessagesBefore(
+    @val(validateToken) token: any,
+    chat_id: string,
+    date: Date,
+    @val(validateCallback) callback: Function | undefined
+  ) {
+    const user = await userIsInChat(token, chat_id);
+    if (user) {
+      const messages = await getMessagesBeforeDate(chat_id, date);
+      if (callback) {
         callback(messages);
       }
     }
   }
 
   @CatchAsync
-  async deleteChatMessage(token: string, incomingMessageObject: any, callback: Function) {
+  @Validate
+  async deleteChatMessage(
+    @val(validateToken) token: string,
+    @val(deleteMessageSchema.validate.bind(deleteMessageSchema)) incomingMessageObject: any,
+    @val(validateCallback) callback: Function | undefined
+  ) {
     const message = await getMessageById(incomingMessageObject.chat_id, incomingMessageObject.id, incomingMessageObject.created_at);
     
     if (typeof(message) == "undefined") {
-      if (callback instanceof Function) {
+      if (callback) {
         callback("Error: No such message");
       }
       return;
@@ -124,13 +143,18 @@ export class SocketEventHandler {
     await removeMessageById(message.chat_id, message.id, message.created_at);
     this.socket.to(message!.chat_id.toString()).emit("delete chat message", message!.id);
 
-    if (callback instanceof Function) {
+    if (callback) {
       callback(message);
     }
   }
 
   @CatchAsync
-  async updateChatMessage(token: string, incomingMessageObject: any, callback: Function) {
+  @Validate
+  async updateChatMessage(
+    @val(validateToken) token: string,
+    @val(updateMessageSchema.validate.bind(updateMessageSchema)) incomingMessageObject: any,
+    @val(validateCallback) callback: Function | undefined
+  ) {
     const message = await getMessageById(incomingMessageObject.chat_id, incomingMessageObject.id, incomingMessageObject.created_at);
     
     if (typeof(message) == "undefined") {
@@ -149,7 +173,7 @@ export class SocketEventHandler {
       return;
     }
     
-    await updateMessage(incomingMessageObject);
+    await updateMessage( { ...incomingMessageObject });
     
     this.socket.to(message!.chat_id.toString()).emit("update chat message", incomingMessageObject);
 
@@ -159,7 +183,8 @@ export class SocketEventHandler {
   }
 
   @CatchAsync
-  async writing(token: any, chatID: any) {
+  @Validate
+  async writing(@val(validateToken) token: any, chatID: any) {
     const user = await getUser(token);
     this.socket.volatile.in(chatID).emit("writing", user._id);
   }
