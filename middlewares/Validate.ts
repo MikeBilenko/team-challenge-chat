@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { SocketEventHandler } from "../controllers/chatWebSocketControllers";
 const validateMetadataKey = Symbol("validate");
 
 type ValidateMetadata = { parameterIndex: number, validators: Function[] };
@@ -11,10 +12,10 @@ export function val(...validators: Function[]) {
   }
 }
 
-export function Validate(target: any, propertyName: string, descriptor: TypedPropertyDescriptor<(...agrs: any[]) => any>) {
+export function Validate(target: any, propertyName: string, descriptor: TypedPropertyDescriptor<(...agrs: any[]) => any>) : TypedPropertyDescriptor<(...agrs: any[]) => any> {
   let method = descriptor.value!;
  
-  descriptor.value = function () {
+  function decorator(this: any, ...args: any[]) {
     let validateMetadata: ValidateMetadata[] = Reflect.getOwnMetadata(validateMetadataKey, target, propertyName);
     if (validateMetadata) {
       for (const { parameterIndex, validators } of validateMetadata) {
@@ -29,7 +30,9 @@ export function Validate(target: any, propertyName: string, descriptor: TypedPro
           }
         }
       }
+      return method.apply(this, arguments as unknown as any[])
     }
-    return method.apply(this, arguments as unknown as any[]);
   };
+
+  return { value: decorator };
 }

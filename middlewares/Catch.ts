@@ -9,7 +9,7 @@ export function Catch(
   let method = descriptor.value!;
   function decorator(this: SocketEventHandler, ..._args: any[]) {
     try {
-      method.call(this, ..._args);
+      return method.call(this, ..._args);
     } catch (error) {
       if (error instanceof Error) {
         console.error(error.message, '\n', error.stack);
@@ -28,7 +28,7 @@ export function CatchAsync(
   let method = descriptor.value!;
   async function decorator(this: SocketEventHandler, ..._args: any[]) {
     try {
-      await method.call(this, ..._args);
+      return await method.call(this, ..._args);
     } catch (error) {
       if (error instanceof Error) {
         console.error(error.message, '\n', error.stack);
