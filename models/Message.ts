@@ -22,6 +22,7 @@ export class Message {
   reactions: Reaction[];
   chat_id: string;
   created_at: number;
+  edited: boolean;
 
   constructor(obj: { id: cassandra.types.Uuid, 
     user_id: string, 
@@ -30,7 +31,9 @@ export class Message {
     responds_to_message_id: cassandra.types.Uuid | null,
     reactions: Reaction[],
     chat_id: string,
-    created_at: number }) {
+    created_at: number,
+    edited: boolean
+  }) {
     this.id = obj.id;
     this.user_id = obj.user_id;
     this.text = obj.text;
@@ -39,6 +42,7 @@ export class Message {
     this.reactions = obj.reactions;
     this.chat_id = obj.chat_id;
     this.created_at = obj.created_at;
+    this.edited = obj.edited;
   }
 }
 
@@ -58,7 +62,8 @@ export class MessageModel {
         responds_to_message_id: null, // or another UUID if applicable
         reactions: [ { user_id: userId, reaction: ")" } ], // Add reactions if any
         chat_id: chatId,
-        created_at: Date.now()
+        created_at: Date.now(),
+        edited: false
     });
   
     try {

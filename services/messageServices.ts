@@ -15,6 +15,7 @@ export async function createMessage(messageObj: {
   const message = new Message({
     id: cassandra.types.Uuid.random(),
     created_at: Date.now(),
+    edited: false,
     ...messageObj
   })
   await MessageModel.insert(message);
@@ -41,6 +42,7 @@ export function updateMessage(updatedMessage: Message) : Promise<void> {
     chat_id: updatedMessage.chat_id, id: updatedMessage.id, 
     created_at: updatedMessage.created_at, 
     // fields to update
+    edited: true,
     text: updatedMessage.text,
     images: updatedMessage.images,
     responds_to_message_id: updatedMessage.responds_to_message_id,
