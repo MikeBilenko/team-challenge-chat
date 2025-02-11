@@ -4,9 +4,8 @@ const onlineStatusMapper = mapper.forModel('OnlineStatus');
 
 export class OnlineStatusModel {
   static async getOnlineStatus(userID: string): Promise<boolean> {
-    const result = onlineStatusMapper.find({ user_id: userID });
-    if (result) {
-      console.log(result);
+    const result = await onlineStatusMapper.find({ user_id: userID });
+    if (result.first()) {
       return true;
     }
     return false;

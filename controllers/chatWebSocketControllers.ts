@@ -4,7 +4,7 @@ import { getChats, userIsInChat, userIsModeratorInChat } from "../backend_api/ch
 import { uploadToCloudinary } from "../services/cloudinary";
 import { getUser } from "../backend_api/user_api";
 import { Catch, CatchAsync } from "../middlewares/Catch";
-import { setOnlineStatus } from "../services/onlineStatusServices";
+import { getOnlineStatus, setOnlineStatus } from "../services/onlineStatusServices";
 import { val, Validate } from "../middlewares/Validate";
 import { validateToken } from "../schemas/validateToken";
 import { validateCallback } from "../schemas/validateCallback";
@@ -91,7 +91,14 @@ export class SocketEventHandler {
     }
     setOnlineStatus(user._id, true);
     if (callback) {
-      // TODO attach online to chat info
+      for (const chat of chats) {
+        chat.onlineUsers = [];
+        for (const userID of chat.users) {
+          if (await getOnlineStatus(userID)) {
+            chat.onlineUsers.push(userID);
+          }
+        }
+      }
       callback(chats);
     }
   }
