@@ -19,10 +19,11 @@ export class Message {
   text: string;
   images: string[];
   responds_to_message_id: cassandra.types.Uuid | null;
-  reactions: Reaction[];
+  reactions: Reaction[] | null;
   chat_id: string;
   created_at: number;
   edited: boolean;
+  users_read: string[] | null;
 
   constructor(obj: { id: cassandra.types.Uuid, 
     user_id: string, 
@@ -32,7 +33,8 @@ export class Message {
     reactions: Reaction[],
     chat_id: string,
     created_at: number,
-    edited: boolean
+    edited: boolean,
+    users_read: string[];
   }) {
     this.id = obj.id;
     this.user_id = obj.user_id;
@@ -43,6 +45,7 @@ export class Message {
     this.chat_id = obj.chat_id;
     this.created_at = obj.created_at;
     this.edited = obj.edited;
+    this.users_read = obj.users_read;
   }
 }
 
@@ -60,10 +63,11 @@ export class MessageModel {
         text: 'Hello, this is a test message!',
         images: ['image1.png', 'image2.png'],
         responds_to_message_id: null, // or another UUID if applicable
-        reactions: [ { user_id: userId, reaction: ")" } ], // Add reactions if any
+        reactions: [ { user_id: userId, reaction: ")" } ],
         chat_id: chatId,
         created_at: Date.now(),
-        edited: false
+        edited: false,
+        users_read: [ "test_user_id", "test_user_id" ] // autoremoves second
     });
   
     try {

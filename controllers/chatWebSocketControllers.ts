@@ -1,5 +1,5 @@
 import { DefaultEventsMap, Socket } from "socket.io";
-import { createMessage, getMessageById, getMessagesBeforeDate, removeMessageById, updateMessage } from "../services/messageServices";
+import { createMessage, getMessageById, getMessagesBeforeDate, readMessage, removeMessageById, updateMessage } from "../services/messageServices";
 import { getChats, userIsInChat, userIsModeratorInChat } from "../backend_api/chat_api";
 import { uploadToCloudinary } from "../services/cloudinary";
 import { getUser } from "../backend_api/user_api";
@@ -8,7 +8,10 @@ import { getOnlineStatus, setOnlineStatus } from "../services/onlineStatusServic
 import { val, Validate } from "../middlewares/Validate";
 import { validateToken } from "../schemas/validateToken";
 import { validateCallback } from "../schemas/validateCallback";
-import { deleteMessageSchema, incomingMessageSchema, updateMessageSchema } from "../schemas/messageSchemas";
+import { deleteMessageSchema, incomingMessageSchema, readMessageSchema, updateMessageSchema } from "../schemas/messageSchemas";
+import { Message } from "../models/Message";
+import e from "express";
+import { read } from "fs";
 
 export class SocketEventHandler {
   constructor(
@@ -215,6 +218,71 @@ export class SocketEventHandler {
     }
   }
 
+  @CatchAsync
+  @Validate
+  async getUnreadMessages(
+    @val(validateToken) token: any,
+    chat_id: string,
+    @val(validateCallback) callback: Function | undefined
+  ) {
+    const amountPerFetch = 50; // 2 at minimum!
+    const user = await userIsInChat(token, chat_id);
+    if (user && user._id) {
+      const userID = user._id;
+      const messages: Message[] = [];
+      let encounteredReadMessage = false;
+      let fetchDate = Date.now() + 1;
+      while (!encounteredReadMessage) {
+        const newMessages = await getMessagesBeforeDate(chat_id, new Date(fetchDate), amountPerFetch);
+        for (const element of newMessages) {
+          if (element.created_at < fetchDate) {
+            if (element.users_read?.find(val => val == userID)) {
+              encounteredReadMessage = true;
+              break;
+            } else {
+              messages.push(element);
+              fetchDate = element.created_at;
+            }
+          }
+        }
+        if (newMessages.length < amountPerFetch) {
+          break;
+        }
+      }
+
+      if (callback) {
+        callback(messages);
+      }
+    }
+  }
+
+  @CatchAsync
+  @Validate
+  async updateReadStatus(
+    @val(validateToken) token: any,
+    @val(readMessageSchema.validate.bind(readMessageSchema)) incomingMessageObject: any,
+    @val(validateCallback) callback: Function | undefined
+  ) {
+    const user = await getUser(token);
+    if (user && user._id) {
+      const userID = user._id;
+      const message = await getMessageById(incomingMessageObject.chat_id, incomingMessageObject.id, incomingMessageObject.created_at);
+      if (typeof(message) == "undefined") {
+        if (callback) {
+          throw new Error("No such message");
+        }
+        return;
+      }
+
+      message.users_read?.push(userID);
+      await readMessage( { ...message });
+
+      if (callback) {
+        callback(message);
+      }
+    }
+  }
+
   subscribe(): void {
     this.socket.on('ping', this.ping.bind(this));
     this.socket.on("chat message", this.chatMessage.bind(this));
@@ -223,6 +291,8 @@ export class SocketEventHandler {
     this.socket.on("delete chat message", this.deleteChatMessage.bind(this));
     this.socket.on("update chat message", this.updateChatMessage.bind(this));
     this.socket.on("writing", this.writing.bind(this));
+    this.socket.on("get unread messages", this.getUnreadMessages.bind(this));
+    this.socket.on("update read status", this.updateReadStatus.bind(this));
     this.socket.on("disconnecting", this.disconnecting.bind(this))
   }
 

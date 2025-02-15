@@ -1,8 +1,14 @@
 <script src="/socket.io/socket.io.js"></script>
+<div>
+  <input type="text" id="email" value="Password1@email.com">
+  <input type="text" id="password" value="Password1">
+  <button value="Log in" id="login">Log in</button>
+</div>
 <input type="text" id="chatInput">
 <input type="file" id="fileInput" multiple>
 <input type="button" id="deleteLastMessage" value="Delete last message">
 <input type="button" id="updateLastMessage" value="Update last message">
+<input type="button" id="readLastMessage" value="Read last message">
 <script>
   const socket = io(); // put URL as a parameter
   socket.emit("ping", ()=>{console.log("pong delivered to server")});
@@ -10,20 +16,22 @@
 
   async function getToken() {
     const url = new URL("/auth/login", "https://team-challenge-backend-c55i.onrender.com/").href;  
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("email").value;
     const res = await fetch(url, {
       method: "POST",
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({"email": "Password1@email.com", "password": "Password1"}),
+      body: JSON.stringify({"email": email, "password": password}),
     });
     const json = await res.json();
     console.log(json);
     return json.tokens.accessToken;
   }
 
-  async function onPageLoad() {
+  async function connect() {
     const token = await getToken();
     console.log(token);
     
@@ -31,6 +39,7 @@
     const fileInput = document.getElementById("fileInput");
     const deleteLastMessage = document.getElementById("deleteLastMessage");
     const updateLastMessage = document.getElementById("updateLastMessage");
+    const readLastMessage = document.getElementById("readLastMessage");
   
     socket.emit("set chat rooms", token, (chats)=>{
       console.log(chats);
@@ -60,9 +69,12 @@
       let lastMessages;
       
       socket.emit(
-          "get messages before", 
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzA0NDdhMGEwYmNiODQ3MGQ5MjhlZSIsImlhdCI6MTczNTQxMzAxMiwiZXhwIjoxNzM1NDE2NjEyfQ.rUjHAldTEAhwpSJO3GEx0BFfbwiTKN2cwHDB2NeQF7s", 
-          chats[0]._id, Date.now(), (messages)=>{lastMessages = messages; console.log(messages)});
+          "get messages before", token, chats[0]._id, Date.now(),
+          (messages)=>{lastMessages = messages; console.log(messages)});
+
+      socket.emit(
+          "get unread messages", token, chats[0]._id,
+          (messages)=>{console.log('unread messages', messages)});
   
       
       deleteLastMessage.onclick = (e) => {
@@ -75,6 +87,11 @@
         let message = { id, chat_id, created_at, /*images, */responds_to_message_id };
         message.text = "Updated message";
         socket.emit("update chat message", token, message, (res) => {console.log(res)});
+      }
+      readLastMessage.onclick = (e) => {
+        let { id, chat_id, created_at } = lastMessages[0];
+        let message = { id, chat_id, created_at };
+        socket.emit("update read status", token, message, (res) => {console.log(res)});
       }
     });
   
@@ -108,5 +125,5 @@
     });
   }
 
-  onPageLoad();
+  document.getElementById('login').onclick = connect;
 </script>

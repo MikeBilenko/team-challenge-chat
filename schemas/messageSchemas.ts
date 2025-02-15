@@ -46,6 +46,16 @@ export const updateMessageSchema = Joi.object({
     .allow(null)
 })
 
+export const readMessageSchema = Joi.object({
+  chat_id: Joi.string()
+    .required(),
+  id: Joi.string()
+    .required(),
+  created_at: Joi.string()
+    .isoDate()
+    .required()
+})
+
 export const deleteMessageSchema = Joi.object({
   chat_id: Joi.string()
     .required(),
