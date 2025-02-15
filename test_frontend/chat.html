@@ -63,7 +63,7 @@
         const message = document.createElement("p");
         message.innerHTML = input.value;
         document.body.insertBefore(message, document.body.lastElement);
-        socket.emit("chat message", token, { text: input.value, chat_id: chats[0]._id, images: fileInput.files });
+        socket.emit("chat message", token, { text: input.value, chat_id: chats[0]._id, images: Array.from(fileInput.files) });
       }
   
       let lastMessages;
@@ -84,8 +84,9 @@
       }
       updateLastMessage.onclick = (e) => {
         let { id, chat_id, created_at, images, responds_to_message_id } = lastMessages[0];
-        let message = { id, chat_id, created_at, /*images, */responds_to_message_id };
+        let message = { id, chat_id, created_at, responds_to_message_id };
         message.text = "Updated message";
+        message.images = Array.from(fileInput.files);
         socket.emit("update chat message", token, message, (res) => {console.log(res)});
       }
       readLastMessage.onclick = (e) => {

@@ -63,7 +63,7 @@ export class SocketEventHandler {
     let messageObject = (await createMessage({
       user_id: user_id, 
       text: messageText,
-      images: images, // TODO: add images
+      images: images,
       responds_to_message_id: incomingMessageObject.responds_to_message_id,
       reactions: [],
       chat_id: chat_id,
@@ -150,6 +150,7 @@ export class SocketEventHandler {
       return;
     }
 
+    // TODO remove connected images
     await removeMessageById(message.chat_id, message.id, message.created_at);
     this.socket.to(message!.chat_id.toString()).emit("delete chat message", message!.id);
 
@@ -183,12 +184,31 @@ export class SocketEventHandler {
       return;
     }
     
-    await updateMessage( { ...incomingMessageObject });
-    
-    this.socket.to(message!.chat_id.toString()).emit("update chat message", incomingMessageObject);
+    let images: string[] = [];
+    if (incomingMessageObject.images) {
+      try {
+        for (let i = 0; incomingMessageObject.images[i] && i < 10; i++) {
+          let file = incomingMessageObject.images[i];
+          images.push(await uploadToCloudinary(file));
+        }
+      } catch (error) {
+        console.log(error);
+        if (callback) {
+          callback(error);
+        }
+      }
+    }
 
-    if (typeof(callback) == "function") {
-      callback(incomingMessageObject);
+    const newMessage = typeof(incomingMessageObject.images) == "undefined" ? 
+      { ...message, ...incomingMessageObject }:
+      { ...message, ...incomingMessageObject, images };
+
+    await updateMessage( newMessage );
+
+    this.socket.to(message!.chat_id.toString()).emit("update chat message", newMessage);
+
+    if (callback) {
+      callback(newMessage);
     }
   }
 
