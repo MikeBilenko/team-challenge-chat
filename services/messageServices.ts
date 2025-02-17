@@ -29,9 +29,13 @@ export function getMessagesBeforeDate(chat_id: string, date: Date, amount?: numb
   { fetchSize: amount || 20 });
 }
 
-export function getMessageById(chat_id: string, message_id: cassandra.types.Uuid, created_at: number) : Promise<Message | undefined> {
+export function getMessage(chat_id: string, message_id: cassandra.types.Uuid, created_at: number) : Promise<Message | undefined> {
   return MessageModel.findOne({chat_id, id: message_id, created_at});
 }
+
+// export async function getMessageById(message_id: cassandra.types.Uuid) : Promise<Message | undefined> {
+//   return (await MessageModel.find({ id: message_id }))[0];
+// }
 
 export function removeMessageById(chat_id: string, message_id: cassandra.types.Uuid, created_at: number) : Promise<void> {
   return MessageModel.remove({chat_id, id: message_id, created_at});
@@ -59,5 +63,20 @@ export function readMessage(updatedMessage: Message) : Promise<void> {
     created_at: updatedMessage.created_at, 
     // fields to update
     users_read: updatedMessage.users_read,
+  });
+}
+
+export function addReactionToMessage(message: Message, reaction: Reaction) : Promise<void> {
+  if (!message.reactions) {
+    message.reactions = [];
+  }
+  message.reactions?.push(reaction);
+  return MessageModel.update({
+    // PK
+    chat_id: message.chat_id,
+    id: message.id, 
+    created_at: message.created_at, 
+    // fields to update
+    reactions: message.reactions,
   });
 }

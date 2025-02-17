@@ -9,6 +9,7 @@
 <input type="button" id="deleteLastMessage" value="Delete last message">
 <input type="button" id="updateLastMessage" value="Update last message">
 <input type="button" id="readLastMessage" value="Read last message">
+<input type="button" id="reactToLastMessage" value="React to last message">
 <script>
   const socket = io(); // put URL as a parameter
   socket.emit("ping", ()=>{console.log("pong delivered to server")});
@@ -40,6 +41,7 @@
     const deleteLastMessage = document.getElementById("deleteLastMessage");
     const updateLastMessage = document.getElementById("updateLastMessage");
     const readLastMessage = document.getElementById("readLastMessage");
+    const reactToLastMessage = document.getElementById("reactToLastMessage");
   
     socket.emit("set chat rooms", token, (chats)=>{
       console.log(chats);
@@ -94,6 +96,11 @@
         let message = { id, chat_id, created_at };
         socket.emit("update read status", token, message, (res) => {console.log(res)});
       }
+      reactToLastMessage.onclick = (e) => {
+        let { id, chat_id, created_at } = lastMessages[0];
+        let message = { id, chat_id, created_at };
+        socket.emit("react to message", token, message, ")", (res) => {console.log(res)});
+      }
     });
   
   
@@ -123,6 +130,10 @@
 
     socket.on("user offline", (userID) => {
       console.log(userID, "offline");
+    });
+
+    socket.on("react to message", (message) => {
+      console.log(message, "reacted to message");
     });
   }
 

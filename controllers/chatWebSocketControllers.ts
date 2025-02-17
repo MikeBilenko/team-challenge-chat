@@ -1,5 +1,5 @@
 import { DefaultEventsMap, Socket } from "socket.io";
-import { createMessage, getMessageById, getMessagesBeforeDate, readMessage, removeMessageById, updateMessage } from "../services/messageServices";
+import { addReactionToMessage, createMessage, getMessage, getMessagesBeforeDate, readMessage, removeMessageById, updateMessage } from "../services/messageServices";
 import { getChats, userIsInChat, userIsModeratorInChat } from "../backend_api/chat_api";
 import { uploadToCloudinary } from "../services/cloudinary";
 import { getUser } from "../backend_api/user_api";
@@ -10,8 +10,6 @@ import { validateToken } from "../schemas/validateToken";
 import { validateCallback } from "../schemas/validateCallback";
 import { deleteMessageSchema, incomingMessageSchema, readMessageSchema, updateMessageSchema } from "../schemas/messageSchemas";
 import { Message } from "../models/Message";
-import e from "express";
-import { read } from "fs";
 
 export class SocketEventHandler {
   constructor(
@@ -48,6 +46,7 @@ export class SocketEventHandler {
     let images: string[] = [];
     if (incomingMessageObject.images) {
       try {
+        // TODO: rework this for an array maybe?
         for (let i = 0; incomingMessageObject.images[i] && i < 10; i++) {
           let file = incomingMessageObject.images[i];
           images.push(await uploadToCloudinary(file));
@@ -130,7 +129,7 @@ export class SocketEventHandler {
     @val(deleteMessageSchema.validate.bind(deleteMessageSchema)) incomingMessageObject: any,
     @val(validateCallback) callback: Function | undefined
   ) {
-    const message = await getMessageById(incomingMessageObject.chat_id, incomingMessageObject.id, incomingMessageObject.created_at);
+    const message = await getMessage(incomingMessageObject.chat_id, incomingMessageObject.id, incomingMessageObject.created_at);
     
     if (typeof(message) == "undefined") {
       if (callback) {
@@ -166,7 +165,7 @@ export class SocketEventHandler {
     @val(updateMessageSchema.validate.bind(updateMessageSchema)) incomingMessageObject: any,
     @val(validateCallback) callback: Function | undefined
   ) {
-    const message = await getMessageById(incomingMessageObject.chat_id, incomingMessageObject.id, incomingMessageObject.created_at);
+    const message = await getMessage(incomingMessageObject.chat_id, incomingMessageObject.id, incomingMessageObject.created_at);
     
     if (typeof(message) == "undefined") {
       if (callback) {
@@ -286,19 +285,47 @@ export class SocketEventHandler {
     const user = await getUser(token);
     if (user && user._id) {
       const userID = user._id;
-      const message = await getMessageById(incomingMessageObject.chat_id, incomingMessageObject.id, incomingMessageObject.created_at);
+      const message = await getMessage(incomingMessageObject.chat_id, incomingMessageObject.id, incomingMessageObject.created_at);
       if (typeof(message) == "undefined") {
-        if (callback) {
-          throw new Error("No such message");
-        }
-        return;
+        throw new Error("No such message");
       }
 
       message.users_read?.push(userID);
       await readMessage( { ...message });
+      
+      this.socket.in(incomingMessageObject.chat_id).emit("update read status", message);
 
       if (callback) {
         callback(message);
+      }
+    }
+  }
+
+  @CatchAsync
+  @Validate
+  async reactToMessage(
+    @val(validateToken) token: any,
+    @val(readMessageSchema.validate.bind(readMessageSchema)) incomingMessageObject: any,
+    incomingReaction: any,
+    @val(validateCallback) callback: Function | undefined
+  ) {
+    const user = await getUser(token);
+    if (user && user._id) {
+      const userID = user._id;
+      const message = await getMessage(incomingMessageObject.chat_id, incomingMessageObject.id, incomingMessageObject.created_at);
+      if (typeof(message) == "undefined") {
+        throw new Error("No such message");
+      }
+      // TODO add possible reactions list
+      // if (!PossibleReactions.includes(incomingReaction)) {
+      //   throw new Error("Unsupported reaction");
+      // }
+      await addReactionToMessage(message, { user_id: userID, reaction: incomingReaction });
+      const newMessage = await getMessage(incomingMessageObject.chat_id, incomingMessageObject.id, incomingMessageObject.created_at);
+      this.socket.in(message.chat_id).emit("react to message", newMessage);
+
+      if (callback) {
+        callback(newMessage);
       }
     }
   }
@@ -313,6 +340,7 @@ export class SocketEventHandler {
     this.socket.on("writing", this.writing.bind(this));
     this.socket.on("get unread messages", this.getUnreadMessages.bind(this));
     this.socket.on("update read status", this.updateReadStatus.bind(this));
+    this.socket.on("react to message", this.reactToMessage.bind(this));
     this.socket.on("disconnecting", this.disconnecting.bind(this))
   }
 
