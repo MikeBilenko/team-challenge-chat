@@ -55,6 +55,9 @@ app.get("/chat", (_, res) => {
 connectWithRetry(5, 5000).then(async () => {
   // TEST message insertion
   await MessageModel.addTestMessage();
+  // console.log(await MessageModel.find({ chat_id: 'test_chat_id' }));
+  // console.log((await MessageModel.find({ chat_id: 'test_chat_id' }))[0]!.users_read?.push("abc"));
+  
   server.listen(PORT, () => {
     console.log(`Server is running. Use our API on port: ${PORT}`);
   });

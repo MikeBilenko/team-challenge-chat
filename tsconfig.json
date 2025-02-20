@@ -8,7 +8,9 @@
         "forceConsistentCasingInFileNames": true, // Disallow inconsistently-cased references to the same file
         "outDir": "./dist",                    // Redirect output structure to the directory
         "rootDir": "./src",                    // Specify the root directory of input files
-        "sourceMap": true                       // Generates corresponding '.map' file for debugging
+        "sourceMap": true,                       // Generates corresponding '.map' file for debugging
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
     },
     "include": [
         "src/**/*"                              // Include all TypeScript files in the src directory

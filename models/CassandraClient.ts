@@ -4,7 +4,7 @@ const Mapper = cassandra.mapping.Mapper;
 
 // const CassandraClient = new Client({ contactPoints: ["cassandra-container"], localDataCenter: "datacenter1", keyspace: "chat", credentials: { username: 'cassandra', password: 'cassandra' } });
 
-const CassandraClient =new Client({
+const CassandraClient = new Client({
     cloud: {
     secureConnectBundle: "./models/secure-connect-team-challenge-chat.zip",
     },
@@ -34,4 +34,8 @@ async function connectWithRetry(retries: number, delay: number) {
     }
 }
 
-export { CassandraClient, connectWithRetry };
+const mapper = new Mapper(CassandraClient, { 
+    models: { 'Message': { tables: ['messages'] }, 'OnlineStatus': { tables: ['online_statuses'] } }
+});
+
+export { CassandraClient, connectWithRetry, mapper };

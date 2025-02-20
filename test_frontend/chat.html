@@ -1,8 +1,15 @@
 <script src="/socket.io/socket.io.js"></script>
+<div>
+  <input type="text" id="email" value="Password1@email.com">
+  <input type="text" id="password" value="Password1">
+  <button value="Log in" id="login">Log in</button>
+</div>
 <input type="text" id="chatInput">
 <input type="file" id="fileInput" multiple>
 <input type="button" id="deleteLastMessage" value="Delete last message">
 <input type="button" id="updateLastMessage" value="Update last message">
+<input type="button" id="readLastMessage" value="Read last message">
+<input type="button" id="reactToLastMessage" value="React to last message">
 <script>
   const socket = io(); // put URL as a parameter
   socket.emit("ping", ()=>{console.log("pong delivered to server")});
@@ -10,20 +17,22 @@
 
   async function getToken() {
     const url = new URL("/auth/login", "https://team-challenge-backend-c55i.onrender.com/").href;  
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("email").value;
     const res = await fetch(url, {
       method: "POST",
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({"email": "Password1@email.com", "password": "Password1"}),
+      body: JSON.stringify({"email": email, "password": password}),
     });
     const json = await res.json();
     console.log(json);
     return json.tokens.accessToken;
   }
 
-  async function onPageLoad() {
+  async function connect() {
     const token = await getToken();
     console.log(token);
     
@@ -31,16 +40,24 @@
     const fileInput = document.getElementById("fileInput");
     const deleteLastMessage = document.getElementById("deleteLastMessage");
     const updateLastMessage = document.getElementById("updateLastMessage");
+    const readLastMessage = document.getElementById("readLastMessage");
+    const reactToLastMessage = document.getElementById("reactToLastMessage");
   
     socket.emit("set chat rooms", token, (chats)=>{
       console.log(chats);
   
+      input.onkeydown = () => {
+        socket.emit("writing", token, chats[0]._id);
+      }
+
       input.onchange = () => {
         console.log(input.value);
         const message = document.createElement("p");
         message.innerHTML = input.value;
         document.body.insertBefore(message, document.body.lastElement);
-        socket.emit("chat message", token, { message: input.value, chat_id: chats[0]._id }, ()=>{
+        let { id, chat_id, created_at } = lastMessages[0];
+        let responds_to_message_pk = { id, chat_id, created_at }; // or leave empty
+        socket.emit("chat message", token, { text: input.value, chat_id: chats[0]._id, responds_to_message_pk }, ()=>{
           console.log("chat message delivered")
         });
       }
@@ -50,27 +67,56 @@
         const message = document.createElement("p");
         message.innerHTML = input.value;
         document.body.insertBefore(message, document.body.lastElement);
-        socket.emit("chat message", token, { message: input.value, chat_id: chats[0]._id, images: fileInput.files });
+        let { id, chat_id, created_at } = lastMessages[0];
+        let responds_to_message_pk = { id, chat_id, created_at };
+        socket.emit("chat message", token, { text: input.value, chat_id: chats[0]._id, images: Array.from(fileInput.files), responds_to_message_pk });
       }
   
       let lastMessages;
       
+      socket.emit("get messages before", token, chats[0]._id, Date.now(), (messages)=>{
+        lastMessages = messages; 
+        console.log(messages);
+        if (lastMessages[0].responds_to_message_pk) {
+          let { id, chat_id, created_at } = lastMessages[0].responds_to_message_pk;
+          let message = { id, chat_id, created_at };
+          socket.emit("get message", token, message, (message) => {
+            console.log("last message responds to", message);
+          });
+        }
+      });
+
       socket.emit(
-          "get messages before", 
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NzA0NDdhMGEwYmNiODQ3MGQ5MjhlZSIsImlhdCI6MTczNTQxMzAxMiwiZXhwIjoxNzM1NDE2NjEyfQ.rUjHAldTEAhwpSJO3GEx0BFfbwiTKN2cwHDB2NeQF7s", 
-          chats[0]._id, Date.now(), (messages)=>{lastMessages = messages._rs.rows; console.log(messages)});
-  
-      
+          "get unread messages", token, chats[0]._id,
+          (messages)=>{console.log('unread messages', messages)});
+
+      socket.emit("get possible reactions", (message) => {
+        console.log(message, "possible reactions");
+      });
+
       deleteLastMessage.onclick = (e) => {
-        socket.emit("delete chat message", token, lastMessages[0], (res) => {console.log(res)});
+        let { id, chat_id, created_at } = lastMessages[0];
+        let message = { id, chat_id, created_at };
+        socket.emit("delete chat message", token, message, (res) => {console.log(res)});
       }
       updateLastMessage.onclick = (e) => {
-        let message = lastMessages[0];
+        let { id, chat_id, created_at, images, responds_to_message_pk } = lastMessages[0];
+        let message = { id, chat_id, created_at, responds_to_message_pk };
         message.text = "Updated message";
+        message.images = Array.from(fileInput.files);
         socket.emit("update chat message", token, message, (res) => {console.log(res)});
       }
+      readLastMessage.onclick = (e) => {
+        let { id, chat_id, created_at } = lastMessages[0];
+        let message = { id, chat_id, created_at };
+        socket.emit("update read status", token, message, (res) => {console.log(res)});
+      }
+      reactToLastMessage.onclick = (e) => {
+        let { id, chat_id, created_at } = lastMessages[0];
+        let message = { id, chat_id, created_at };
+        socket.emit("react to message", token, message, "😴", (res) => {console.log(res)});
+      }
     });
-  
   
     socket.on("chat message", (messageObject) => {
       const message = document.createElement("p");
@@ -87,7 +133,23 @@
     socket.on("update chat message", (messageObject) => {
       console.log(messageObject);
     });
+
+    socket.on("writing", (userID) => {
+      console.log(userID, "is writing");
+    });
+
+    socket.on("user online", (userID) => {
+      console.log(userID, "online");
+    });
+
+    socket.on("user offline", (userID) => {
+      console.log(userID, "offline");
+    });
+
+    socket.on("react to message", (message) => {
+      console.log(message, "reacted to message");
+    });
   }
 
-  onPageLoad();
+  document.getElementById('login').onclick = connect;
 </script>
