@@ -10,6 +10,7 @@ import { validateToken } from "../schemas/validateToken";
 import { validateCallback } from "../schemas/validateCallback";
 import { deleteMessageSchema, incomingMessageSchema, readMessageSchema, updateMessageSchema } from "../schemas/messageSchemas";
 import { Message } from "../models/Message";
+import { PossibleReactions } from "../helpers/PossibleReactions";
 
 export class SocketEventHandler {
   constructor(
@@ -291,7 +292,7 @@ export class SocketEventHandler {
       }
 
       message.users_read?.push(userID);
-      await readMessage( { ...message });
+      await readMessage(message);
       
       this.socket.in(incomingMessageObject.chat_id).emit("update read status", message);
 
@@ -316,11 +317,10 @@ export class SocketEventHandler {
       if (typeof(message) == "undefined") {
         throw new Error("No such message");
       }
-      // TODO add possible reactions list
-      // if (!PossibleReactions.includes(incomingReaction)) {
-      //   throw new Error("Unsupported reaction");
-      // }
-      await addReactionToMessage(message, { user_id: userID, reaction: incomingReaction });
+      if (!PossibleReactions.includes(incomingReaction)) {
+        throw new Error("Unsupported reaction");
+      }
+      await addReactionToMessage(message, userID, incomingReaction);
       const newMessage = await getMessage(incomingMessageObject.chat_id, incomingMessageObject.id, incomingMessageObject.created_at);
       this.socket.in(message.chat_id).emit("react to message", newMessage);
 
@@ -328,6 +328,14 @@ export class SocketEventHandler {
         callback(newMessage);
       }
     }
+  }
+
+  @CatchAsync
+  @Validate
+  async getPossibleReactions(
+    @val(validateCallback) callback: Function | undefined
+  ) {
+    if (callback) callback(PossibleReactions);
   }
 
   subscribe(): void {
@@ -341,6 +349,7 @@ export class SocketEventHandler {
     this.socket.on("get unread messages", this.getUnreadMessages.bind(this));
     this.socket.on("update read status", this.updateReadStatus.bind(this));
     this.socket.on("react to message", this.reactToMessage.bind(this));
+    this.socket.on("get possible reactions", this.getPossibleReactions.bind(this));
     this.socket.on("disconnecting", this.disconnecting.bind(this))
   }
 

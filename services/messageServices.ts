@@ -66,11 +66,12 @@ export function readMessage(updatedMessage: Message) : Promise<void> {
   });
 }
 
-export function addReactionToMessage(message: Message, reaction: Reaction) : Promise<void> {
+export function addReactionToMessage(message: Message, userID: string, emoji: string) : Promise<void> {
   if (!message.reactions) {
     message.reactions = [];
-  }
-  message.reactions?.push(reaction);
+  }  
+  message.removeReaction(userID);
+  message.addReaction(userID, emoji);
   return MessageModel.update({
     // PK
     chat_id: message.chat_id,

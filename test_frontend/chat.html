@@ -99,10 +99,13 @@
       reactToLastMessage.onclick = (e) => {
         let { id, chat_id, created_at } = lastMessages[0];
         let message = { id, chat_id, created_at };
-        socket.emit("react to message", token, message, ")", (res) => {console.log(res)});
+        socket.emit("react to message", token, message, "😴", (res) => {console.log(res)});
       }
     });
   
+    socket.emit("get possible reactions", (message) => {
+      console.log(message, "possible reactions");
+    });
   
     socket.on("chat message", (messageObject) => {
       const message = document.createElement("p");
