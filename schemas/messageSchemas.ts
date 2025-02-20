@@ -10,7 +10,8 @@ export const incomingMessageSchema = Joi.object({
   images: Joi.array()
     .allow(null)
     .max(10),
-  replies_to: Joi.string()
+  responds_to_message_pk: Joi.object()
+    .allow(null)
 })
 
 export const updateMessageSchema = Joi.object({
@@ -28,7 +29,7 @@ export const updateMessageSchema = Joi.object({
   images: Joi.array()
     .allow(null)
     .max(10),
-  responds_to_message_id: Joi.string()
+  responds_to_message_pk: Joi.object()
     .allow(null)
 })
 
@@ -43,6 +44,16 @@ export const readMessageSchema = Joi.object({
 })
 
 export const deleteMessageSchema = Joi.object({
+  chat_id: Joi.string()
+    .required(),
+  id: Joi.string()
+    .required(),
+  created_at: Joi.string()
+    .isoDate()
+    .required()
+})
+
+export const getMessageSchema = Joi.object({
   chat_id: Joi.string()
     .required(),
   id: Joi.string()

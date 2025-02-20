@@ -8,7 +8,7 @@ import { getOnlineStatus, setOnlineStatus } from "../services/onlineStatusServic
 import { val, Validate } from "../middlewares/Validate";
 import { validateToken } from "../schemas/validateToken";
 import { validateCallback } from "../schemas/validateCallback";
-import { deleteMessageSchema, incomingMessageSchema, readMessageSchema, updateMessageSchema } from "../schemas/messageSchemas";
+import { deleteMessageSchema, getMessageSchema, incomingMessageSchema, readMessageSchema, updateMessageSchema } from "../schemas/messageSchemas";
 import { Message } from "../models/Message";
 import { PossibleReactions } from "../helpers/PossibleReactions";
 
@@ -64,7 +64,7 @@ export class SocketEventHandler {
       user_id: user_id, 
       text: messageText,
       images: images,
-      responds_to_message_id: incomingMessageObject.responds_to_message_id,
+      responds_to_message_pk: incomingMessageObject.responds_to_message_pk,
       reactions: [],
       chat_id: chat_id,
     }));
@@ -332,6 +332,26 @@ export class SocketEventHandler {
 
   @CatchAsync
   @Validate
+  async getMessage(
+    @val(validateToken) token: string,
+    @val(getMessageSchema.validate.bind(getMessageSchema)) incomingMessageObject: any,
+    @val(validateCallback) callback: Function | undefined
+  ) {
+    const user = await userIsInChat(token, incomingMessageObject.chat_id);
+    if (user && user._id) {
+      const message = await getMessage(incomingMessageObject.chat_id, incomingMessageObject.id, incomingMessageObject.created_at);
+      if (callback) {
+        if (!message) {
+          throw new Error("No such message");
+        } else {
+          callback(message);
+        }
+      }
+    }
+  }
+
+  @CatchAsync
+  @Validate
   async getPossibleReactions(
     @val(validateCallback) callback: Function | undefined
   ) {
@@ -350,6 +370,7 @@ export class SocketEventHandler {
     this.socket.on("update read status", this.updateReadStatus.bind(this));
     this.socket.on("react to message", this.reactToMessage.bind(this));
     this.socket.on("get possible reactions", this.getPossibleReactions.bind(this));
+    this.socket.on("get message", this.getMessage.bind(this));
     this.socket.on("disconnecting", this.disconnecting.bind(this))
   }
 

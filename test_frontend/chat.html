@@ -55,7 +55,9 @@
         const message = document.createElement("p");
         message.innerHTML = input.value;
         document.body.insertBefore(message, document.body.lastElement);
-        socket.emit("chat message", token, { text: input.value, chat_id: chats[0]._id }, ()=>{
+        let { id, chat_id, created_at } = lastMessages[0];
+        let responds_to_message_pk = { id, chat_id, created_at }; // or leave empty
+        socket.emit("chat message", token, { text: input.value, chat_id: chats[0]._id, responds_to_message_pk }, ()=>{
           console.log("chat message delivered")
         });
       }
@@ -65,28 +67,41 @@
         const message = document.createElement("p");
         message.innerHTML = input.value;
         document.body.insertBefore(message, document.body.lastElement);
-        socket.emit("chat message", token, { text: input.value, chat_id: chats[0]._id, images: Array.from(fileInput.files) });
+        let { id, chat_id, created_at } = lastMessages[0];
+        let responds_to_message_pk = { id, chat_id, created_at };
+        socket.emit("chat message", token, { text: input.value, chat_id: chats[0]._id, images: Array.from(fileInput.files), responds_to_message_pk });
       }
   
       let lastMessages;
       
-      socket.emit(
-          "get messages before", token, chats[0]._id, Date.now(),
-          (messages)=>{lastMessages = messages; console.log(messages)});
+      socket.emit("get messages before", token, chats[0]._id, Date.now(), (messages)=>{
+        lastMessages = messages; 
+        console.log(messages);
+        if (lastMessages[0].responds_to_message_pk) {
+          let { id, chat_id, created_at } = lastMessages[0].responds_to_message_pk;
+          let message = { id, chat_id, created_at };
+          socket.emit("get message", token, message, (message) => {
+            console.log("last message responds to", message);
+          });
+        }
+      });
 
       socket.emit(
           "get unread messages", token, chats[0]._id,
           (messages)=>{console.log('unread messages', messages)});
-  
-      
+
+      socket.emit("get possible reactions", (message) => {
+        console.log(message, "possible reactions");
+      });
+
       deleteLastMessage.onclick = (e) => {
         let { id, chat_id, created_at } = lastMessages[0];
         let message = { id, chat_id, created_at };
         socket.emit("delete chat message", token, message, (res) => {console.log(res)});
       }
       updateLastMessage.onclick = (e) => {
-        let { id, chat_id, created_at, images, responds_to_message_id } = lastMessages[0];
-        let message = { id, chat_id, created_at, responds_to_message_id };
+        let { id, chat_id, created_at, images, responds_to_message_pk } = lastMessages[0];
+        let message = { id, chat_id, created_at, responds_to_message_pk };
         message.text = "Updated message";
         message.images = Array.from(fileInput.files);
         socket.emit("update chat message", token, message, (res) => {console.log(res)});
@@ -101,10 +116,6 @@
         let message = { id, chat_id, created_at };
         socket.emit("react to message", token, message, "😴", (res) => {console.log(res)});
       }
-    });
-  
-    socket.emit("get possible reactions", (message) => {
-      console.log(message, "possible reactions");
     });
   
     socket.on("chat message", (messageObject) => {

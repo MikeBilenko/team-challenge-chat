@@ -13,12 +13,27 @@ export class Reaction {
   }
 }
 
+export class MessagePK {
+  chat_id: string;
+  id: cassandra.types.Uuid;
+  created_at: number;
+
+  constructor(obj: { chat_id: string,
+    id: cassandra.types.Uuid,
+    created_at: number }
+  ) {
+    this.chat_id = obj.chat_id;
+    this.id = obj.id;
+    this.created_at = obj.created_at;
+  }
+}
+
 export class Message {
   id: cassandra.types.Uuid;
   user_id: string;
   text: string;
   images: string[];
-  responds_to_message_id: cassandra.types.Uuid | null;
+  responds_to_message_pk: MessagePK | null;
   reactions: Reaction[] | null;
   chat_id: string;
   created_at: number;
@@ -29,7 +44,7 @@ export class Message {
     user_id: string, 
     text: string;
     images: string[],
-    responds_to_message_id: cassandra.types.Uuid | null,
+    responds_to_message_pk: MessagePK | null,
     reactions: Reaction[],
     chat_id: string,
     created_at: number,
@@ -40,7 +55,7 @@ export class Message {
     this.user_id = obj.user_id;
     this.text = obj.text;
     this.images = obj.images;
-    this.responds_to_message_id = obj.responds_to_message_id;
+    this.responds_to_message_pk = obj.responds_to_message_pk;
     this.reactions = obj.reactions;
     this.chat_id = obj.chat_id;
     this.created_at = obj.created_at;
@@ -97,7 +112,7 @@ export class MessageModel {
         user_id: userId,
         text: 'Hello, this is a test message!',
         images: ['image1.png', 'image2.png'],
-        responds_to_message_id: null, // or another UUID if applicable
+        responds_to_message_pk: null, // or another UUID if applicable
         reactions: [ reaction ],
         chat_id: chatId,
         created_at: Date.now(),

@@ -1,14 +1,14 @@
 import cassandra from "cassandra-driver";
 const q = cassandra.mapping.q;
 
-import { Message, MessageModel, Reaction } from "../models/Message";
+import { Message, MessageModel, MessagePK, Reaction } from "../models/Message";
 
 
 export async function createMessage(messageObj: {
   user_id: string;
   text: string;
   images: string[];
-  responds_to_message_id: cassandra.types.Uuid | null;
+  responds_to_message_pk: MessagePK | null;
   reactions: Reaction[];
   chat_id: string;
 }) : Promise<Message> {
@@ -33,8 +33,8 @@ export function getMessage(chat_id: string, message_id: cassandra.types.Uuid, cr
   return MessageModel.findOne({chat_id, id: message_id, created_at});
 }
 
-// export async function getMessageById(message_id: cassandra.types.Uuid) : Promise<Message | undefined> {
-//   return (await MessageModel.find({ id: message_id }))[0];
+// export function getMessageByIds(chat_id: string, message_id: cassandra.types.Uuid) : Promise<Message | undefined> {
+//   return MessageModel.findOne({ chat_id, created_at: q.gte(0), id: message_id });
 // }
 
 export function removeMessageById(chat_id: string, message_id: cassandra.types.Uuid, created_at: number) : Promise<void> {
@@ -51,7 +51,7 @@ export function updateMessage(updatedMessage: Message) : Promise<void> {
     edited: true,
     text: updatedMessage.text,
     images: updatedMessage.images,
-    responds_to_message_id: updatedMessage.responds_to_message_id,
+    responds_to_message_pk: updatedMessage.responds_to_message_pk,
   });
 }
 
